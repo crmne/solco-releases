@@ -43,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          repository: crmne/rekordflash
+          repository: crmne/solco
           ref: ${{ env.SOURCE_REF }}
           fetch-depth: 0
           ssh-key: ${{ secrets.SOURCE_DEPLOY_KEY }}
@@ -109,7 +109,7 @@ jobs:
       - name: Check out private source
         uses: actions/checkout@v7
         with:
-          repository: crmne/rekordflash
+          repository: crmne/solco
           ref: ${{ needs.prepare.outputs.source_sha }}
           ssh-key: ${{ secrets.SOURCE_DEPLOY_KEY }}
           persist-credentials: false
@@ -145,7 +145,7 @@ jobs:
         if: needs.prepare.outputs.private_alpha == 'true'
         uses: actions/checkout@v7
         with:
-          repository: crmne/rekordflash
+          repository: crmne/solco
           ref: ${{ env.REKORDFLASH_MODEL_SOURCE_REVISION }}
           path: .release-models
           ssh-key: ${{ secrets.SOURCE_DEPLOY_KEY }}
@@ -336,7 +336,7 @@ jobs:
       - name: Check out private source
         uses: actions/checkout@v7
         with:
-          repository: crmne/rekordflash
+          repository: crmne/solco
           ref: ${{ needs.prepare.outputs.source_sha }}
           ssh-key: ${{ secrets.SOURCE_DEPLOY_KEY }}
           persist-credentials: false
@@ -370,7 +370,7 @@ jobs:
         if: needs.prepare.outputs.private_alpha == 'true'
         uses: actions/checkout@v7
         with:
-          repository: crmne/rekordflash
+          repository: crmne/solco
           ref: ${{ env.REKORDFLASH_MODEL_SOURCE_REVISION }}
           path: .release-models
           ssh-key: ${{ secrets.SOURCE_DEPLOY_KEY }}
@@ -500,7 +500,7 @@ jobs:
       - name: Check out private source for release notes
         uses: actions/checkout@v7
         with:
-          repository: crmne/rekordflash
+          repository: crmne/solco
           ref: ${{ needs.prepare.outputs.source_sha }}
           fetch-depth: 0
           ssh-key: ${{ secrets.SOURCE_DEPLOY_KEY }}
