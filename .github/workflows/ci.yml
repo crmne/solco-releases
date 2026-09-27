@@ -1,6 +1,6 @@
 name: CI
 
-# All of RekordFlash's automation runs here, on free public runners; the
+# All of Solco's automation runs here, on free public runners; the
 # private source repository has no workflows. Every 30 minutes this looks at
 # the private repository: it tests the newest untested commit on master, and
 # starts the release build for a new version tag (publishing still waits for

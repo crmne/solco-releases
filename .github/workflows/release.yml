@@ -222,13 +222,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          name="rekordflash-${RELEASE_TAG}-${{ matrix.target }}"
+          name="solco-${RELEASE_TAG}-${{ matrix.target }}"
           release="target/${{ matrix.target }}/release"
           mkdir -p "dist/$name"
           if [ "${{ runner.os }}" = "Windows" ]; then
-            cp "$release/rekordflash.exe" "dist/$name/"
+            cp "$release/solco.exe" "dist/$name/"
           else
-            cp "$release/rekordflash" "dist/$name/"
+            cp "$release/solco" "dist/$name/"
           fi
           shopt -s nullglob
           for runtime in "$release"/*.dll "$release"/*.so "$release"/*.dylib; do
@@ -237,7 +237,7 @@ jobs:
           cp README.md LICENSE "dist/$name/"
           # Tells the app's updater this unpacked copy may replace itself.
           # The Windows installer leaves it out and installs its own marker.
-          printf 'rekordflash-portable-v1\n' > "dist/$name/rekordflash-portable.txt"
+          printf 'solco-portable-v1\n' > "dist/$name/solco-portable.txt"
           if [ "${{ needs.prepare.outputs.private_alpha }}" = "true" ]; then
             ruby scripts/models.rb stage "$RUNNER_TEMP/alpha-models" "dist/$name/models"
             cp release/private-alpha.json "dist/$name/alpha-release.json"
@@ -245,7 +245,7 @@ jobs:
             chmod 644 "dist/$name/alpha-release.json" "dist/$name/PRIVATE-ALPHA.md"
           fi
           if [ "${{ runner.os }}" = "Linux" ]; then
-            cp --parents packaging/applications/rekordflash.desktop packaging/icons/rekordflash.svg packaging/models/Beat-This-LICENSE "dist/$name/"
+            cp --parents packaging/applications/solco.desktop packaging/icons/solco.svg packaging/models/Beat-This-LICENSE "dist/$name/"
           fi
           cd dist
           if [ "${{ runner.os }}" = "Windows" ]; then
@@ -265,9 +265,9 @@ jobs:
           if (-not (Test-Path $iscc)) {
             throw "Inno Setup compiler is unavailable: $iscc"
           }
-          $source = (Resolve-Path 'dist/rekordflash-${{ env.RELEASE_TAG }}-${{ matrix.target }}').Path
+          $source = (Resolve-Path 'dist/solco-${{ env.RELEASE_TAG }}-${{ matrix.target }}').Path
           $output = (Resolve-Path 'dist').Path
-          $script = (Resolve-Path 'packaging/windows/RekordFlash.iss').Path
+          $script = (Resolve-Path 'packaging/windows/Solco.iss').Path
           $arguments = @("/DSourceDir=$source", "/DOutputDir=$output", "/DAppVersion=$env:VERSION", "/DReleaseTag=$env:RELEASE_TAG")
           if ($env:REKORDFLASH_NUMERIC_VERSION) {
             $arguments += "/DNumericVersion=$env:REKORDFLASH_NUMERIC_VERSION"
@@ -277,8 +277,8 @@ jobs:
             throw "Inno Setup failed with exit code $LASTEXITCODE"
           }
           # The updater's name, or the name older tags' setup script used.
-          if (-not (Test-Path 'dist/rekordflash-${{ env.RELEASE_TAG }}-x86_64-pc-windows-msvc-setup.exe') -and
-              -not (Test-Path 'dist/rekordflash-${{ env.RELEASE_TAG }}-windows-x86_64-setup.exe')) {
+          if (-not (Test-Path 'dist/solco-${{ env.RELEASE_TAG }}-x86_64-pc-windows-msvc-setup.exe') -and
+              -not (Test-Path 'dist/solco-${{ env.RELEASE_TAG }}-windows-x86_64-setup.exe')) {
             throw 'Windows installer was not produced'
           }
 
@@ -406,25 +406,25 @@ jobs:
           set -euo pipefail
           if [ "${{ needs.prepare.outputs.private_alpha }}" = "true" ]; then
             bash packaging/macos/bundle.sh \
-              target/aarch64-apple-darwin/release/rekordflash \
-              RekordFlash.app "$VERSION" "$RUNNER_TEMP/alpha-models" \
+              target/aarch64-apple-darwin/release/solco \
+              Solco.app "$VERSION" "$RUNNER_TEMP/alpha-models" \
               "$REKORDFLASH_MACOS_VERSION" "$REKORDFLASH_MACOS_BUILD_VERSION"
-            cp release/private-alpha.json RekordFlash.app/Contents/Resources/alpha-release.json
-            cp packaging/PRIVATE-ALPHA.md RekordFlash.app/Contents/Resources/
-            chmod 644 RekordFlash.app/Contents/Resources/{alpha-release.json,PRIVATE-ALPHA.md}
+            cp release/private-alpha.json Solco.app/Contents/Resources/alpha-release.json
+            cp packaging/PRIVATE-ALPHA.md Solco.app/Contents/Resources/
+            chmod 644 Solco.app/Contents/Resources/{alpha-release.json,PRIVATE-ALPHA.md}
           else
             bash packaging/macos/bundle.sh \
-              target/aarch64-apple-darwin/release/rekordflash \
-              RekordFlash.app "$VERSION" "$RUNNER_TEMP/beat_this.onnx"
+              target/aarch64-apple-darwin/release/solco \
+              Solco.app "$VERSION" "$RUNNER_TEMP/beat_this.onnx"
           fi
 
       - name: Ad-hoc sign local app
         if: env.APPLE_CERTIFICATE_P12 == ''
-        run: codesign --force --deep --sign - RekordFlash.app
+        run: codesign --force --deep --sign - Solco.app
 
       - name: Verify local app bundle
         if: env.APPLE_CERTIFICATE_P12 == ''
-        run: codesign --verify --deep --strict --verbose=2 RekordFlash.app
+        run: codesign --verify --deep --strict --verbose=2 Solco.app
 
       - name: Build verified native stable DMG
         if: needs.prepare.outputs.private_alpha != 'true'
@@ -433,7 +433,7 @@ jobs:
           gem install native-packages --version 0.6.0 --no-document
           native-packages --config native-packages.yaml build \
             --version "$VERSION" --target macos-arm64 --output "$RUNNER_TEMP/native-stable-macos"
-          name="rekordflash-${RELEASE_TAG}-macos-arm64"
+          name="solco-${RELEASE_TAG}-macos-arm64"
           mkdir -p dist
           cp "$RUNNER_TEMP/native-stable-macos/packages/macos-arm64/dmg/$name.dmg" "dist/$name.dmg"
 
@@ -457,12 +457,12 @@ jobs:
         run: |
           set -euo pipefail
           gem install native-packages --version 0.6.0 --no-document
-          name="rekordflash-${RELEASE_TAG}-macos-arm64"
+          name="solco-${RELEASE_TAG}-macos-arm64"
           release="target/aarch64-apple-darwin/release"
           input="$RUNNER_TEMP/portable-input/$name"
           signed="$RUNNER_TEMP/portable-signed/$name"
           mkdir -p "$input" dist
-          cp "$release/rekordflash" README.md LICENSE "$input/"
+          cp "$release/solco" README.md LICENSE "$input/"
           if [ "${{ needs.prepare.outputs.private_alpha }}" = "true" ]; then
             ruby scripts/models.rb stage "$RUNNER_TEMP/alpha-models" "$input/models"
             cp release/private-alpha.json "$input/alpha-release.json"
@@ -602,14 +602,14 @@ jobs:
             gh release edit "$RELEASE_TAG" \
               "${release_flags[@]}" \
               --repo "$GITHUB_REPOSITORY" \
-              --title "RekordFlash ${{ env.VERSION }}" \
+              --title "Solco ${{ env.VERSION }}" \
               --notes-file release-notes.md
           else
             gh release create "$RELEASE_TAG" dist/* \
               "${release_flags[@]}" \
               --repo "$GITHUB_REPOSITORY" \
               --target main \
-              --title "RekordFlash ${{ env.VERSION }}" \
+              --title "Solco ${{ env.VERSION }}" \
               --notes-file release-notes.md
           fi
       - uses: ruby/setup-ruby@v1
