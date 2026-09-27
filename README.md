@@ -1,7 +1,5 @@
 # Solco
 
-*Formerly RekordFlash.*
-
 A native music library app for preparing tracks and exporting them to standalone Pioneer/AlphaTheta hardware.
 
 **[Download an alpha build](https://github.com/crmne/solco-releases/releases).** All current versions are prereleases.

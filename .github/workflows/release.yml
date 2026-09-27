@@ -69,15 +69,15 @@ jobs:
           if alpha
             require_relative 'scripts/lib/alpha_release'
             require_relative 'scripts/lib/alpha_release_notes'
-            release = RekordFlash::AlphaRelease.load(Dir.pwd, version: version)
-            RekordFlash::AlphaReleaseNotes.read(Dir.pwd)
+            release = Solco::AlphaRelease.load(Dir.pwd, version: version)
+            Solco::AlphaReleaseNotes.read(Dir.pwd)
             tags, status = Open3.capture2('git', 'tag', '--merged', 'HEAD', '--list', 'v*-alpha.*')
             abort 'Unable to inspect earlier alpha versions' unless status.success?
             tags.lines.map(&:strip).reject { |name| name == "v#{version}" }.each do |name|
               previous, status = Open3.capture2('git', 'show', "#{name}:release/private-alpha.json")
               abort "Missing earlier alpha configuration: #{name}" unless status.success?
               previous = JSON.parse(previous, allow_duplicate_key: false)
-              previous = RekordFlash::AlphaRelease.new(previous, version: name.delete_prefix('v'))
+              previous = Solco::AlphaRelease.new(previous, version: name.delete_prefix('v'))
               abort 'Native build counter must increase after earlier alpha tags' unless release.data.fetch('build_number') > previous.data.fetch('build_number')
             end
             puts release.summary
@@ -139,14 +139,14 @@ jobs:
       - name: Require the private model revision
         if: needs.prepare.outputs.private_alpha == 'true'
         shell: bash
-        run: test -n "$REKORDFLASH_MODEL_SOURCE_REVISION"
+        run: test -n "$SOLCO_MODEL_SOURCE_REVISION"
 
       - name: Check out the pinned private model bundle
         if: needs.prepare.outputs.private_alpha == 'true'
         uses: actions/checkout@v7
         with:
           repository: crmne/solco
-          ref: ${{ env.REKORDFLASH_MODEL_SOURCE_REVISION }}
+          ref: ${{ env.SOLCO_MODEL_SOURCE_REVISION }}
           path: .release-models
           ssh-key: ${{ secrets.SOURCE_DEPLOY_KEY }}
           persist-credentials: false
@@ -269,8 +269,8 @@ jobs:
           $output = (Resolve-Path 'dist').Path
           $script = (Resolve-Path 'packaging/windows/Solco.iss').Path
           $arguments = @("/DSourceDir=$source", "/DOutputDir=$output", "/DAppVersion=$env:VERSION", "/DReleaseTag=$env:RELEASE_TAG")
-          if ($env:REKORDFLASH_NUMERIC_VERSION) {
-            $arguments += "/DNumericVersion=$env:REKORDFLASH_NUMERIC_VERSION"
+          if ($env:SOLCO_NUMERIC_VERSION) {
+            $arguments += "/DNumericVersion=$env:SOLCO_NUMERIC_VERSION"
           }
           & $iscc @arguments $script
           if ($LASTEXITCODE -ne 0) {
@@ -301,7 +301,7 @@ jobs:
         run: |
           set -euo pipefail
           gem install native-packages --version 0.6.0 --no-document
-          export SOURCE_DATE_EPOCH="$REKORDFLASH_ALPHA_RELEASED_AT"
+          export SOURCE_DATE_EPOCH="$SOLCO_ALPHA_RELEASED_AT"
           native-packages --config native-packages.yaml build \
             --version "$VERSION" --target "$PACKAGE_TARGET" --output "$RUNNER_TEMP/native-packages"
       - uses: actions/upload-artifact@v7
@@ -364,14 +364,14 @@ jobs:
       - name: Require the private model revision
         if: needs.prepare.outputs.private_alpha == 'true'
         shell: bash
-        run: test -n "$REKORDFLASH_MODEL_SOURCE_REVISION"
+        run: test -n "$SOLCO_MODEL_SOURCE_REVISION"
 
       - name: Check out the pinned private model bundle
         if: needs.prepare.outputs.private_alpha == 'true'
         uses: actions/checkout@v7
         with:
           repository: crmne/solco
-          ref: ${{ env.REKORDFLASH_MODEL_SOURCE_REVISION }}
+          ref: ${{ env.SOLCO_MODEL_SOURCE_REVISION }}
           path: .release-models
           ssh-key: ${{ secrets.SOURCE_DEPLOY_KEY }}
           persist-credentials: false
@@ -408,7 +408,7 @@ jobs:
             bash packaging/macos/bundle.sh \
               target/aarch64-apple-darwin/release/solco \
               Solco.app "$VERSION" "$RUNNER_TEMP/alpha-models" \
-              "$REKORDFLASH_MACOS_VERSION" "$REKORDFLASH_MACOS_BUILD_VERSION"
+              "$SOLCO_MACOS_VERSION" "$SOLCO_MACOS_BUILD_VERSION"
             cp release/private-alpha.json Solco.app/Contents/Resources/alpha-release.json
             cp packaging/PRIVATE-ALPHA.md Solco.app/Contents/Resources/
             chmod 644 Solco.app/Contents/Resources/{alpha-release.json,PRIVATE-ALPHA.md}
@@ -442,7 +442,7 @@ jobs:
         run: |
           set -euo pipefail
           gem install native-packages --version 0.6.0 --no-document
-          export SOURCE_DATE_EPOCH="$REKORDFLASH_ALPHA_RELEASED_AT"
+          export SOURCE_DATE_EPOCH="$SOLCO_ALPHA_RELEASED_AT"
           native-packages --config native-packages.yaml build \
             --version "$VERSION" --target macos-arm64 --output "$RUNNER_TEMP/native-packages"
       - uses: actions/upload-artifact@v7
@@ -548,15 +548,15 @@ jobs:
       # embeds. The app's updater refuses releases without a valid signature.
       - name: Sign checksums
         env:
-          REKORDFLASH_UPDATE_SIGNING_KEY: ${{ secrets.REKORDFLASH_UPDATE_SIGNING_KEY }}
+          SOLCO_UPDATE_SIGNING_KEY: ${{ secrets.SOLCO_UPDATE_SIGNING_KEY }}
         run: |
           set -euo pipefail
           test -f assets/update-public-key.hex
-          test -n "$REKORDFLASH_UPDATE_SIGNING_KEY"
+          test -n "$SOLCO_UPDATE_SIGNING_KEY"
           gem install native-packages --version 0.7.0 --no-document
           native-packages sign-checksums dist/checksums.txt \
             --public-key assets/update-public-key.hex \
-            --key-env REKORDFLASH_UPDATE_SIGNING_KEY
+            --key-env SOLCO_UPDATE_SIGNING_KEY
           native-packages verify-checksums dist/checksums.txt \
             --public-key assets/update-public-key.hex
       - name: Release notes
