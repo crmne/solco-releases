@@ -246,6 +246,10 @@ jobs:
           fi
           if [ "${{ runner.os }}" = "Linux" ]; then
             cp --parents packaging/applications/solco.desktop packaging/icons/solco.svg packaging/models/Beat-This-LICENSE "dist/$name/"
+            # Newer sources also ship the icon drawn for each size (ADR 0176).
+            if [ -d packaging/icons/hicolor ]; then
+              cp -r --parents packaging/icons/hicolor "dist/$name/"
+            fi
           fi
           cd dist
           if [ "${{ runner.os }}" = "Windows" ]; then

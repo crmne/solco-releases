@@ -201,3 +201,5 @@ jobs:
           gem install minitest-mock --version 5.27.0 --no-document
           ruby scripts/test_native_package.rb
           ruby scripts/test_models.rb
+          # The committed platform icons (ADR 0176), where the source has them.
+          if [ -f scripts/test_brand_icons.rb ]; then ruby scripts/test_brand_icons.rb; fi
