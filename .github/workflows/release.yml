@@ -304,7 +304,7 @@ jobs:
           PACKAGE_TARGET: ${{ matrix.package_target }}
         run: |
           set -euo pipefail
-          gem install native-packages --version 0.6.0 --no-document
+          gem install native-packages --version 0.8.1 --no-document
           export SOURCE_DATE_EPOCH="$SOLCO_ALPHA_RELEASED_AT"
           native-packages --config native-packages.yaml build \
             --version "$VERSION" --target "$PACKAGE_TARGET" --output "$RUNNER_TEMP/native-packages"
@@ -434,7 +434,7 @@ jobs:
         if: needs.prepare.outputs.private_alpha != 'true'
         run: |
           set -euo pipefail
-          gem install native-packages --version 0.6.0 --no-document
+          gem install native-packages --version 0.8.1 --no-document
           native-packages --config native-packages.yaml build \
             --version "$VERSION" --target macos-arm64 --output "$RUNNER_TEMP/native-stable-macos"
           name="solco-${RELEASE_TAG}-macos-arm64"
@@ -445,7 +445,7 @@ jobs:
         if: needs.prepare.outputs.private_alpha == 'true'
         run: |
           set -euo pipefail
-          gem install native-packages --version 0.6.0 --no-document
+          gem install native-packages --version 0.8.1 --no-document
           export SOURCE_DATE_EPOCH="$SOLCO_ALPHA_RELEASED_AT"
           native-packages --config native-packages.yaml build \
             --version "$VERSION" --target macos-arm64 --output "$RUNNER_TEMP/native-packages"
@@ -460,7 +460,7 @@ jobs:
       - name: Sign, notarize and archive portable arm64 code
         run: |
           set -euo pipefail
-          gem install native-packages --version 0.6.0 --no-document
+          gem install native-packages --version 0.8.1 --no-document
           name="solco-${RELEASE_TAG}-macos-arm64"
           release="target/aarch64-apple-darwin/release"
           input="$RUNNER_TEMP/portable-input/$name"
@@ -526,7 +526,7 @@ jobs:
         if: needs.prepare.outputs.private_alpha == 'true'
         run: |
           set -euo pipefail
-          gem install native-packages --version 0.6.0 --no-document
+          gem install native-packages --version 0.8.1 --no-document
           ruby scripts/collect_alpha_packages.rb "$RUNNER_TEMP/native-package-inputs" \
             "$RUNNER_TEMP/native-packages-complete" dist "$VERSION"
       - name: Checksums
@@ -557,7 +557,7 @@ jobs:
           set -euo pipefail
           test -f assets/update-public-key.hex
           test -n "$SOLCO_UPDATE_SIGNING_KEY"
-          gem install native-packages --version 0.7.0 --no-document
+          gem install native-packages --version 0.8.1 --no-document
           native-packages sign-checksums dist/checksums.txt \
             --public-key assets/update-public-key.hex \
             --key-env SOLCO_UPDATE_SIGNING_KEY
@@ -633,6 +633,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libarchive-tools binutils rpm
           go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0
-          gem install native-packages --version 0.6.0 --no-document
+          gem install native-packages --version 0.8.1 --no-document
           native-packages build --release "$RELEASE_TAG" --target linux-amd64 --target linux-arm64 --output dist/native-packages
           native-packages publish --from dist/native-packages --target linux-amd64 --target linux-arm64 --to github
