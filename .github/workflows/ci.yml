@@ -190,6 +190,7 @@ jobs:
       - run: |
           gem install minitest --version 6.0.6 --no-document
           ruby scripts/test_release_retention.rb
+          ruby scripts/test_release_artifact_retention.rb
           ruby scripts/test_release_workflow.rb
 
   recipes:

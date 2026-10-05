@@ -23,9 +23,13 @@ This is where Solco's builds, updates and support issues live. Learn more at
 | Linux, Fedora | `solco-….x86_64.rpm` or `solco-….aarch64.rpm` |
 | Linux, any distribution | `solco-…-x86_64-unknown-linux-gnu.tar.gz` or `solco-…-aarch64-unknown-linux-gnu.tar.gz` (portable) |
 
-Solco is in alpha. Builds are free, need no account or license key, and run for
+Solco is in alpha. Local preparation needs no account or license key. Builds run for
 30 days after their release, by which time a newer one is out. Keep a backup of
 your music and library, and use a spare drive for your first exports.
+
+The Solco-funded playlist assistant requires an invitation and your permission
+to share requests and an aggregate library summary. You can also choose your
+own provider under **Connection**. Local analysis and export do not need it.
 
 ### Check your download
 
@@ -68,13 +72,12 @@ describes these checks.
 - **Windows:** 64-bit (x86-64).
 - **Linux:** 64-bit x86-64 or ARM64.
 
-Upcoming Windows releases include `solco.com` beside `solco.exe`. Use the
+Windows 0.8 and later include `solco.com` beside `solco.exe`. Use the
 companion for terminal commands, for example
 `& "$env:LOCALAPPDATA\Programs\Solco\solco.com" list` in PowerShell. It waits
 for completion and preserves output and exit codes. Update scripts that name
 `solco.exe` explicitly to use `solco.com`; shortcuts still open `solco.exe`.
-Keep both files together. Already published releases retain their original
-single-executable command line.
+Keep both files together.
 
 Analysis uses your graphics card when there is one (Metal on macOS, Direct3D 12
 on Windows, Vulkan on Linux) and falls back to the processor otherwise. No CUDA
@@ -91,9 +94,14 @@ or ROCm is needed. Each download is about 120 to 130 MB, analysis models include
 - **Bugs:** [open an issue](https://github.com/crmne/solco-releases/issues) with
   what you did, what you expected and your Solco version (shown in
   **Settings › About**). Leave out anything private.
-- **Error and crash reports** are sent automatically so problems can be fixed
-  without you reporting them. They can name tracks, but never include your
-  music, your library or your user folder's name.
+- **Error and crash reports** are sent automatically by official release builds
+  so problems can be fixed without you reporting them. Development and QA
+  builds do not send them. Reports can name tracks, but do not include audio,
+  library contents or your user folder's name.
+- **Usage counts:** official builds send a daily ping with a random installation
+  ID, version and operating system. Turn it off in **Settings › About**. The
+  [app privacy notice](https://getsolco.com/app-privacy/) explains these counts,
+  assistant sharing and error reports.
 
 ## About this repository
 

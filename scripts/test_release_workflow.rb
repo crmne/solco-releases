@@ -22,6 +22,49 @@ class ReleaseWorkflowTest < Minitest::Test
     assert_equal false, JOB.fetch('concurrency').fetch('cancel-in-progress')
     assert_equal 'release-signing', JOB.fetch('environment')
     assert_equal 'write', WORKFLOW.fetch('permissions').fetch('contents')
+    assert_equal({'contents' => 'write', 'actions' => 'write'}, JOB.fetch('permissions'))
+    refute WORKFLOW.fetch('permissions').key?('actions'), 'artifact deletion permission belongs only to the approved publishing job'
+  end
+
+  def test_early_version_guard_precedes_private_source_and_all_build_jobs
+    prepare = WORKFLOW.fetch('jobs').fetch('prepare').fetch('steps')
+    guard = prepare.find { |entry| entry['name'] == 'Reject superseded versions before building packages' }
+    private_source = prepare.find { |entry| entry.dig('with', 'repository') == 'crmne/solco' }
+    assert_operator prepare.index(guard), :<, prepare.index(private_source)
+    assert_equal 'ruby .release-policy/scripts/release_retention.rb check-publication --tag "$RELEASE_TAG"', guard.fetch('run')
+    %w[build macos].each { |name| assert_equal 'prepare', WORKFLOW.fetch('jobs').fetch(name).fetch('needs') }
+    policy = prepare.find { |entry| entry['name'] == 'Check out public policy before building' }.fetch('with')
+    assert_equal '${{ github.sha }}', policy.fetch('ref')
+    assert_equal false, policy.fetch('persist-credentials')
+    assert_includes step('Publish public binary release').fetch('run'), 'check-publication --tag "$RELEASE_TAG"'
+  end
+
+  def test_packages_expire_in_one_day_but_verification_manifests_are_preserved
+    uploads = %w[build macos].flat_map do |name|
+      WORKFLOW.fetch('jobs').fetch(name).fetch('steps').select { |entry| entry['uses'] == 'actions/upload-artifact@v7' }
+    end
+    assert_equal 4, uploads.size
+    uploads.each { |entry| assert_equal 1, entry.fetch('with').fetch('retention-days') }
+    audit = step('Save the exact package artifact retirement inventory').fetch('with')
+    assert_equal 90, audit.fetch('retention-days')
+    assert_equal 'package-artifact-retirement-${{ env.RELEASE_TAG }}', audit.fetch('name')
+    assert_equal 'release-retirement-${{ env.RELEASE_TAG }}', step('Save the exact verified retirement inventory').fetch('with').fetch('name')
+  end
+
+  def test_artifact_deletion_follows_verified_publication_and_saved_exact_inventory
+    names = ['Retire only the verified older application releases',
+             'Verify published downloads and plan package artifact retirement',
+             'Save the exact package artifact retirement inventory',
+             'Retire only the verified release package artifacts']
+    assert_equal names.map { |name| index(name) }.sort, names.map { |name| index(name) }
+    names.drop(1).each { |name| refute step(name).key?('if'), 'a failed verification must stop deletion' }
+    plan, apply = step(names[1]).fetch('run'), step(names[3]).fetch('run')
+    assert_includes plan, 'release_artifact_retention.rb plan'
+    assert_includes apply, 'release_artifact_retention.rb apply'
+    %w[--tag --directory --public-key --manifest --publishing-run].each do |option|
+      assert_equal plan[/#{option} (.*)/, 1], apply[/#{option} (.*)/, 1]
+    end
+    assert_includes apply, '--publishing-run "$GITHUB_RUN_ID"'
   end
 
   def test_all_linux_packages_are_staged_before_checksums_and_signing

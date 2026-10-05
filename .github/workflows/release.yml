@@ -41,6 +41,20 @@ jobs:
       source_sha: ${{ steps.inputs.outputs.source_sha }}
       private_alpha: ${{ steps.inputs.outputs.private_alpha }}
     steps:
+      - name: Check out public policy before building
+        uses: actions/checkout@v7
+        with:
+          repository: crmne/solco-releases
+          ref: ${{ github.sha }}
+          path: .release-policy
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0'
+      - name: Reject superseded versions before building packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ruby .release-policy/scripts/release_retention.rb check-publication --tag "$RELEASE_TAG"
       - uses: actions/checkout@v7
         with:
           repository: crmne/solco
@@ -48,9 +62,6 @@ jobs:
           fetch-depth: 0
           ssh-key: ${{ secrets.SOURCE_DEPLOY_KEY }}
           persist-credentials: false
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '4.0'
       - name: Bind version, tag and alpha configuration
         id: inputs
         shell: bash
@@ -330,6 +341,7 @@ jobs:
         if: needs.prepare.outputs.private_alpha == 'true'
         with:
           name: native-packages-${{ matrix.package_target }}
+          retention-days: 1
           path: ${{ runner.temp }}/native-packages/
           include-hidden-files: true
           if-no-files-found: error
@@ -337,6 +349,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: application-${{ matrix.target }}
+          retention-days: 1
           path: |
             dist/*.tar.gz
             dist/*.zip
@@ -475,6 +488,7 @@ jobs:
         if: needs.prepare.outputs.private_alpha == 'true'
         with:
           name: native-packages-macos-arm64
+          retention-days: 1
           path: ${{ runner.temp }}/native-packages/
           include-hidden-files: true
           if-no-files-found: error
@@ -515,6 +529,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: application-macos-arm64
+          retention-days: 1
           path: |
             dist/*.dmg
             dist/*.tar.gz
@@ -527,6 +542,9 @@ jobs:
     # Publishing waits for the maintainer's approval, and only this job can
     # read the release signing key.
     environment: release-signing
+    permissions:
+      contents: write
+      actions: write
     # Builds for different versions may overlap, publication and retirement may not.
     concurrency:
       group: solco-published-releases
@@ -687,3 +705,30 @@ jobs:
             --tag "$RELEASE_TAG" --directory "$RUNNER_TEMP/release-retention-downloads" \
             --public-key assets/update-public-key.hex \
             --manifest "$RUNNER_TEMP/release-retirement-plan.json"
+      - name: Verify published downloads and plan package artifact retirement
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ruby .release-policy/scripts/release_artifact_retention.rb plan \
+            --tag "$RELEASE_TAG" --directory "$RUNNER_TEMP/release-retention-downloads" \
+            --public-key assets/update-public-key.hex \
+            --manifest "$RUNNER_TEMP/package-artifact-retirement-plan.json" \
+            --publishing-run "$GITHUB_RUN_ID"
+      - name: Save the exact package artifact retirement inventory
+        uses: actions/upload-artifact@v7
+        with:
+          name: package-artifact-retirement-${{ env.RELEASE_TAG }}
+          path: ${{ runner.temp }}/package-artifact-retirement-plan.json
+          retention-days: 90
+          if-no-files-found: error
+      - name: Retire only the verified release package artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ruby .release-policy/scripts/release_artifact_retention.rb apply \
+            --tag "$RELEASE_TAG" --directory "$RUNNER_TEMP/release-retention-downloads" \
+            --public-key assets/update-public-key.hex \
+            --manifest "$RUNNER_TEMP/package-artifact-retirement-plan.json" \
+            --publishing-run "$GITHUB_RUN_ID"
