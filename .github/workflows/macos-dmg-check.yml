@@ -1,0 +1,50 @@
+name: Check Mac DMG recipe
+run-name: Check Mac DMG recipe ${{ inputs.source_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Reviewed private source commit (40 lowercase hexadecimal characters)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  native-image:
+    name: Native Mac image fixture
+    runs-on: macos-latest
+    timeout-minutes: 10
+    env:
+      SOURCE_SHA: ${{ inputs.source_sha }}
+    steps:
+      - name: Require an exact private source commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo 'source_sha must be 40 lowercase hexadecimal characters' >&2
+            exit 1
+          fi
+      - name: Check out the reviewed private source
+        uses: actions/checkout@v7
+        with:
+          repository: crmne/solco
+          ref: ${{ inputs.source_sha }}
+          ssh-key: ${{ secrets.SOURCE_DEPLOY_KEY }}
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0'
+      - name: Check the native image with synthetic data
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          sw_vers
+          df -h "$RUNNER_TEMP"
+          # The fixture owns a RUNNER_TEMP child and its TMPDIR, then unmounts
+          # and removes it. It never launches Solco or opens Finder.
+          ruby scripts/test_macos_dmg.rb

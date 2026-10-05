@@ -136,11 +136,37 @@ Copy or verification failure preserves the original Cargo tree. This cleanup
 requires the exact GitHub Actions workspace and rejects linked target folders,
 so it is not a local mbx cache-maintenance command. Before/after disk diagnostics
 remain in the job log; signing and notarization checks are unchanged.
+The retry reduced Cargo output from 1.7 GiB to 75 MiB and showed 94 GiB of host
+space free, but hit the same image-creation error. Reclaiming compiler output
+therefore did not resolve that failure; the DMG recipe needs its own correction.
 
 For a packaging failure before publication, fix the public workflow and start
-a new dispatch with the same immutable private source tag. Do not rewrite the
-tag or reuse an older workflow revision. Successful packages from an earlier
-attempt remain subject to the verified retirement and expiry policy above.
+a new dispatch with the same private source tag when the correction only
+changes runner maintenance. Do not reuse an older workflow revision.
+
+The 2026-10-05 `0.8.0-alpha.1` candidate required a separate, explicitly reviewed
+exception for a private DMG recipe correction. Before refreshing that signed
+private candidate tag, verify that no public application release, public tag or
+release assets exist for its version. Preserve the prior source commit and
+failed-run evidence. Earlier release attempts must have completed and must
+be unable to publish before refreshing the candidate tag. Keep application
+code, version, native build counter, fixed release timestamp and model inputs
+unchanged. Review and natively test
+the packaging correction, merge it, then bind the candidate tag to that exact
+source revision and dispatch the current workflow. Its unchanged preflight
+must bind every platform build to the same corrected source SHA; do not mix
+packages from earlier attempts. This exception does not permit changing any
+published tag or release bytes. Successful build artifacts from earlier failed
+attempts remain subject to verified retirement and expiry as above.
+
+Before retrying the complete release, maintainers can dispatch the separate
+`Check Mac DMG recipe` workflow with the reviewed private `source_sha` (exactly
+40 lowercase hexadecimal characters). It checks the native image helper on
+the hosted Mac runner using synthetic data, then mounts the image read-only
+without Finder. It performs no application compilation, model staging, signing,
+notarization or publication. Its temporary files belong to that runner job and
+are cleaned by the native fixture. This manually invoked check has no schedule
+or pull-request trigger and does not replace full release verification.
 
 The normal path is the public `Build release` workflow, dispatched with the
 version and its private source tag:
