@@ -633,6 +633,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          ruby .release-policy/scripts/release_retention.rb check-publication --tag "$RELEASE_TAG"
           release_flags=()
           if [ "${{ needs.prepare.outputs.private_alpha }}" = "true" ]; then
             release_flags+=(--prerelease --latest=false)

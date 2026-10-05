@@ -5,6 +5,8 @@ require 'yaml'
 require 'tmpdir'
 require 'fileutils'
 require 'open3'
+require 'json'
+require 'rbconfig'
 require_relative 'collect_stable_packages'
 
 class ReleaseWorkflowTest < Minitest::Test
@@ -53,6 +55,35 @@ class ReleaseWorkflowTest < Minitest::Test
     assert_equal '${{ github.sha }}', policy.fetch('ref')
     assert_equal '.release-policy', policy.fetch('path')
     assert_equal false, policy.fetch('persist-credentials')
+  end
+
+  def test_rebuilding_a_retired_tag_cannot_recreate_or_upload_downloads
+    Dir.mktmpdir('solco-retired-publication-') do |root|
+      FileUtils.mkdir_p(File.join(root, '.release-policy/scripts'))
+      FileUtils.cp(File.join(__dir__, 'release_retention.rb'), File.join(root, '.release-policy/scripts'))
+      bin = File.join(root, 'bin')
+      Dir.mkdir(bin)
+      calls = File.join(root, 'gh-calls.jsonl')
+      File.write(File.join(bin, 'gh'), "#!#{RbConfig.ruby}\n" + <<~'RUBY')
+        require 'json'
+        File.open(ENV.fetch('QA_GH_CALLS'), 'a') { |file| file.puts(JSON.generate(ARGV)) }
+        abort 'Unexpected publication mutation' unless ARGV ==
+          ['api', 'repos/crmne/solco-releases/releases?per_page=100', '--paginate', '--slurp']
+        puts JSON.generate([[{'tag_name' => 'v0.8.0-alpha.1', 'draft' => false}]])
+      RUBY
+      File.chmod(0o755, File.join(bin, 'gh'))
+      command = step('Publish public binary release').fetch('run')
+                    .gsub('${{ needs.prepare.outputs.private_alpha }}', 'true')
+                    .gsub('${{ env.VERSION }}', '0.7.0-alpha.1')
+      environment = {'RELEASE_TAG' => 'v0.7.0-alpha.1', 'VERSION' => '0.7.0-alpha.1',
+                     'GITHUB_REPOSITORY' => 'crmne/solco-releases', 'QA_GH_CALLS' => calls,
+                     'PATH' => "#{bin}#{File::PATH_SEPARATOR}#{ENV.fetch('PATH')}"}
+      _, error, status = Open3.capture3(environment, 'bash', '-euo', 'pipefail', '-c', command, chdir: root)
+      refute status.success?
+      assert_includes error, 'A newer application release exists: v0.8.0-alpha.1'
+      assert_equal [['api', 'repos/crmne/solco-releases/releases?per_page=100', '--paginate', '--slurp']],
+                   File.readlines(calls).map { |line| JSON.parse(line) }
+    end
   end
 
   def test_stable_notes_are_copied_exactly_from_committed_file

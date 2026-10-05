@@ -158,6 +158,19 @@ class ReleaseRetentionTest < Minitest::Test
     assert_blocked(/newer application release/) { policy.plan }
   end
 
+  def test_publication_rejects_retired_tag_before_it_exists_again
+    assert_equal TAG, Retention.check_publication_version!([@new], TAG).tag
+    assert_blocked(/newer application release/) do
+      Retention.check_publication_version!([@new], @old.fetch('tag_name'))
+    end
+  end
+
+  def test_publication_accepts_new_version_and_ignores_drafts_and_unrelated_tags
+    inventory = [@old, release('v0.9.0-alpha.1', 600).merge('draft' => true),
+                 {'tag_name' => 'models-v1', 'draft' => false}]
+    assert_equal TAG, Retention.check_publication_version!(inventory, TAG).tag
+  end
+
   def test_newer_release_published_after_plan_blocks
     manifest = policy.plan
     @github.inventory << release('v0.9.0-alpha.1', 600)

@@ -61,8 +61,21 @@ module Solco
       }
     end
 
-    def self.candidates(releases, tag)
+    # Run inside the workflow's shared publication lock, before any upload or
+    # release mutation. Retained tags remain rebuildable without making retired
+    # plaintext-model downloads public again.
+    def self.check_publication_version!(releases, tag)
       target = Version.parse(tag) or raise 'Expected a stable or alpha application version'
+      releases.each do |release|
+        next if release.fetch('draft')
+        version = Version.parse(release.fetch('tag_name'))
+        raise "A newer application release exists: #{version.tag}" if version && version > target
+      end
+      target
+    end
+
+    def self.candidates(releases, tag)
+      target = check_publication_version!(releases, tag)
       selected = releases.find { |r| r.fetch('tag_name') == tag } or raise 'New release is missing'
       raise 'New release is still a draft' if selected.fetch('draft')
       raise 'Release channel does not match its tag' unless selected.fetch('prerelease') == !target.alpha.nil?
@@ -75,8 +88,6 @@ module Solco
           'draft'
         elsif !version
           'not an application version'
-        elsif version > target
-          raise "A newer application release exists: #{version.tag}"
         elsif target.alpha && !version.alpha
           'stable channel retained while publishing an alpha'
         elsif version == target
@@ -269,12 +280,18 @@ if $PROGRAM_NAME == __FILE__
     command = ARGV.shift
     options = {}
     OptionParser.new do |parser|
-      parser.banner = 'release_retention.rb plan|apply --tag TAG --directory CACHE --public-key KEY --manifest PLAN'
+      parser.banner = 'release_retention.rb check-publication --tag TAG; plan|apply --tag TAG --directory CACHE --public-key KEY --manifest PLAN'
       parser.on('--tag TAG') { |v| options[:tag] = v }
       parser.on('--directory PATH') { |v| options[:directory] = v }
       parser.on('--public-key PATH') { |v| options[:public_key] = v }
       parser.on('--manifest PATH') { |v| options[:manifest] = v }
     end.parse!
+    if command == 'check-publication'
+      raise 'Expected check-publication and only --tag TAG' unless ARGV.empty? && options.keys == [:tag]
+      Solco::ReleaseRetention.check_publication_version!(Solco::ReleaseRetention::GitHub.new.releases, options.fetch(:tag))
+      puts "Publication version accepted: #{options.fetch(:tag)}"
+      exit 0
+    end
     raise 'Expected plan or apply and all four options' unless %w[plan apply].include?(command) &&
       ARGV.empty? && %i[tag directory public_key manifest].all? { |key| options[key] }
     manifest_path = options.delete(:manifest)

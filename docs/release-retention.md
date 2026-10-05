@@ -18,6 +18,12 @@ retirement across versions behind the existing `release-signing` environment.
 The environment approval and `contents: write` token cover both publication and
 the retirement policy. No extra token or repository permission is needed.
 
+Immediately before any release creation, upload or edit, the same locked job
+checks that no newer published application version exists. A rebuilt retired
+tag therefore cannot restore older downloads before the retirement step gets
+a chance to reject it. Drafts and unrelated tags do not block publication;
+rerunning the current version remains supported.
+
 Before publishing, alpha notes must be the reviewed `release/notes.md` in the
 private source tag. Stable notes must be committed at
 `packaging/release-notes/vX.Y.Z.md`; missing notes stop the preflight. All ten
