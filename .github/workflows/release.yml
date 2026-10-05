@@ -245,6 +245,14 @@ jobs:
             cp release/private-alpha.json "dist/$name/alpha-release.json"
             cp packaging/PRIVATE-ALPHA.md "dist/$name/"
             chmod 644 "dist/$name/alpha-release.json" "dist/$name/PRIVATE-ALPHA.md"
+          elif [ -f src/model_bundle.rs ]; then
+            # Stable packages include the same pinned Beat This model as macOS.
+            # The staging command checks its size and SHA-256, then encrypts it.
+            model="$RUNNER_TEMP/beat_this.onnx"
+            curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+              --retry 3 --max-filesize 83162650 --output "$model" \
+              https://github.com/danigb/beat-this-rs/releases/download/model-large/beat_this.onnx
+            ruby scripts/models.rb stage-beat "$model" "dist/$name/models"
           fi
           if [ "${{ runner.os }}" = "Linux" ]; then
             cp --parents packaging/applications/solco.desktop packaging/icons/solco.svg packaging/models/Beat-This-LICENSE "dist/$name/"
@@ -479,9 +487,14 @@ jobs:
             cp packaging/PRIVATE-ALPHA.md "$input/"
             chmod 644 "$input/alpha-release.json" "$input/PRIVATE-ALPHA.md"
           else
-            mkdir -p "$input/models"
-            cp "$RUNNER_TEMP/beat_this.onnx" "$input/models/"
-            cp packaging/models/Beat-This-LICENSE "$input/models/LICENSE"
+            if [ -f src/model_bundle.rs ]; then
+              ruby scripts/models.rb stage-beat "$RUNNER_TEMP/beat_this.onnx" "$input/models"
+            else
+              # Historical source tags still use their original model loader.
+              mkdir -p "$input/models"
+              cp "$RUNNER_TEMP/beat_this.onnx" "$input/models/"
+              cp packaging/models/Beat-This-LICENSE "$input/models/LICENSE"
+            fi
           fi
           shopt -s nullglob
           for runtime in "$release"/*.dylib; do
