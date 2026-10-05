@@ -175,6 +175,23 @@ jobs:
         shell: bash
         run: mbx test --locked --all-targets --no-fail-fast --message-format short
 
+  release-policy:
+    name: release retention fixtures
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0'
+      - run: |
+          gem install minitest --version 6.0.6 --no-document
+          ruby scripts/test_release_retention.rb
+          ruby scripts/test_release_workflow.rb
+
   recipes:
     name: packaging recipes
     if: github.event_name != 'schedule'

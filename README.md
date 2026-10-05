@@ -47,6 +47,12 @@ If the new version does not start, the previous one comes back.
 Every update is verified against Solco's publisher signature before it is
 installed. Turn checks off, or check now, in **Settings › About**.
 
+After each release's downloads, publisher signature and links have been verified,
+older application releases and their downloads are removed. A new alpha replaces
+older alphas while keeping the latest stable release available. Git tags and
+version history remain. The [release retention policy](docs/release-retention.md)
+describes these checks.
+
 - The macOS app, the Windows installer and the portable Windows and Linux
   archives update themselves.
 - A DEB or RPM installed through your package manager updates by installing the

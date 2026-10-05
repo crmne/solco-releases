@@ -81,6 +81,9 @@ jobs:
               abort 'Native build counter must increase after earlier alpha tags' unless release.data.fetch('build_number') > previous.data.fetch('build_number')
             end
             puts release.summary
+          else
+            notes = "packaging/release-notes/v#{version}.md"
+            abort 'Missing committed stable release notes' unless File.file?(notes) && !File.read(notes).strip.empty?
           end
           File.open(ENV.fetch('GITHUB_OUTPUT'), 'a') do |output|
             output.puts("source_sha=#{head.strip}")
@@ -524,6 +527,10 @@ jobs:
     # Publishing waits for the maintainer's approval, and only this job can
     # read the release signing key.
     environment: release-signing
+    # Builds for different versions may overlap, publication and retirement may not.
+    concurrency:
+      group: solco-published-releases
+      cancel-in-progress: false
     steps:
       - name: Check out private source for release notes
         uses: actions/checkout@v7
@@ -532,6 +539,13 @@ jobs:
           ref: ${{ needs.prepare.outputs.source_sha }}
           fetch-depth: 0
           ssh-key: ${{ secrets.SOURCE_DEPLOY_KEY }}
+          persist-credentials: false
+      - name: Check out public release policy
+        uses: actions/checkout@v7
+        with:
+          repository: crmne/solco-releases
+          ref: ${{ github.sha }}
+          path: .release-policy
           persist-credentials: false
       - uses: ruby/setup-ruby@v1
         with:
@@ -553,6 +567,23 @@ jobs:
           gem install native-packages --version 0.8.1 --no-document
           ruby scripts/collect_alpha_packages.rb "$RUNNER_TEMP/native-package-inputs" \
             "$RUNNER_TEMP/native-packages-complete" dist "$VERSION"
+      - uses: actions/setup-go@v5
+        if: needs.prepare.outputs.private_alpha != 'true'
+        with:
+          go-version: '1.26.4'
+          cache: false
+      - name: Build stable Linux packages before signing the full download set
+        if: needs.prepare.outputs.private_alpha != 'true'
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y libarchive-tools binutils rpm
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0
+          gem install native-packages --version 0.8.1 --no-document
+          native-packages build --version "$VERSION" --target linux-amd64 --target linux-arm64 \
+            --output "$RUNNER_TEMP/stable-linux-packages"
+          ruby .release-policy/scripts/collect_stable_packages.rb \
+            "$RUNNER_TEMP/stable-linux-packages" dist "$VERSION"
       - name: Checksums
         run: |
           ruby <<'RUBY'
@@ -594,18 +625,9 @@ jobs:
             ruby scripts/alpha_release_notes.rb --version "$VERSION" > release-notes.md
             exit 0
           fi
-          previous="$(git describe --tags --abbrev=0 "${RELEASE_TAG}^" 2>/dev/null || true)"
-          if [ -n "$previous" ]; then
-            range="$previous..$RELEASE_TAG"
-          else
-            range="$RELEASE_TAG"
-          fi
-          {
-            echo "## What's changed"
-            git log --format='- %s' "$range"
-            echo
-            echo "Verify downloaded files with \`checksums.txt\`."
-          } > release-notes.md
+          notes="packaging/release-notes/$RELEASE_TAG.md"
+          test -s "$notes"
+          cp "$notes" release-notes.md
       - name: Publish public binary release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -640,23 +662,27 @@ jobs:
               --title "Solco ${{ env.VERSION }}" \
               --notes-file release-notes.md
           fi
-      - uses: ruby/setup-ruby@v1
-        if: "!contains(env.VERSION, '-')"
-        with:
-          ruby-version: '4.0'
-      - uses: actions/setup-go@v5
-        if: "!contains(env.VERSION, '-')"
-        with:
-          go-version: '1.26.4'
-          cache: false
-      - name: Build and attach native Linux packages
-        if: "!contains(env.VERSION, '-') && hashFiles('native-packages.yaml') != ''"
+      - name: Verify published downloads and plan older release retirement
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libarchive-tools binutils rpm
-          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0
-          gem install native-packages --version 0.8.1 --no-document
-          native-packages build --release "$RELEASE_TAG" --target linux-amd64 --target linux-arm64 --output dist/native-packages
-          native-packages publish --from dist/native-packages --target linux-amd64 --target linux-arm64 --to github
+          set -euo pipefail
+          ruby .release-policy/scripts/release_retention.rb plan \
+            --tag "$RELEASE_TAG" --directory "$RUNNER_TEMP/release-retention-downloads" \
+            --public-key assets/update-public-key.hex \
+            --manifest "$RUNNER_TEMP/release-retirement-plan.json"
+      - name: Save the exact verified retirement inventory
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-retirement-${{ env.RELEASE_TAG }}
+          path: ${{ runner.temp }}/release-retirement-plan.json
+          if-no-files-found: error
+      - name: Retire only the verified older application releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ruby .release-policy/scripts/release_retention.rb apply \
+            --tag "$RELEASE_TAG" --directory "$RUNNER_TEMP/release-retention-downloads" \
+            --public-key assets/update-public-key.hex \
+            --manifest "$RUNNER_TEMP/release-retirement-plan.json"
