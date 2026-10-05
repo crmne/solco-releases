@@ -70,10 +70,10 @@ or ROCm is needed. Each download is about 120 to 130 MB, analysis models include
 
 ## Feedback and support
 
-- **Feedback:** open Activity at the bottom of the sidebar and click the
-  Feedback icon in its header. It starts a conversation with Carmine, who makes
-  Solco, and replies appear in the same place. **Tell us**, next to anything that
-  needs you, starts one with the error already filled in.
+- **Feedback:** click the Feedback icon at the top of the sidebar, beside
+  Add a music folder and Settings. It starts a conversation with the Solco
+  team, and replies appear in the same place. **Tell us**, next to anything
+  that needs you, starts one with the error already filled in.
 - **Bugs:** [open an issue](https://github.com/crmne/solco-releases/issues) with
   what you did, what you expected and your Solco version (shown in
   **Settings › About**). Leave out anything private.
