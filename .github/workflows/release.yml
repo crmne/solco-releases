@@ -178,6 +178,7 @@ jobs:
         if: needs.prepare.outputs.private_alpha == 'true'
         shell: bash
         env:
+          SOLCO_OFFICIAL_RELEASE: '1'
           TARGET: ${{ matrix.target }}
         run: |
           # Ruby's Windows setup exports GNU MAKE; OpenSSL's MSVC build needs NMAKE.
@@ -190,6 +191,7 @@ jobs:
         if: needs.prepare.outputs.private_alpha != 'true'
         shell: bash
         env:
+          SOLCO_OFFICIAL_RELEASE: '1'
           TARGET: ${{ matrix.target }}
         run: |
           if [[ "$RUNNER_OS" == Windows ]]; then
@@ -386,10 +388,14 @@ jobs:
         run: ruby scripts/model_archive.rb stage-private "$VERSION" .release-models "$RUNNER_TEMP/alpha-models"
 
       - name: Build private alpha arm64
+        env:
+          SOLCO_OFFICIAL_RELEASE: '1'
         if: needs.prepare.outputs.private_alpha == 'true'
         run: ruby scripts/alpha_release.rb build --version "$VERSION" --target aarch64-apple-darwin
 
       - name: Build stable arm64
+        env:
+          SOLCO_OFFICIAL_RELEASE: '1'
         if: needs.prepare.outputs.private_alpha != 'true'
         run: cargo build --locked --release --message-format short --target aarch64-apple-darwin
 
