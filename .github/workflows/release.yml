@@ -375,6 +375,13 @@ jobs:
           ref: ${{ needs.prepare.outputs.source_sha }}
           ssh-key: ${{ secrets.SOURCE_DEPLOY_KEY }}
           persist-credentials: false
+      - name: Check out macOS runner maintenance policy
+        uses: actions/checkout@v7
+        with:
+          repository: crmne/solco-releases
+          ref: ${{ github.sha }}
+          path: .release-policy
+          persist-credentials: false
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '4.0'
@@ -427,6 +434,15 @@ jobs:
           SOLCO_OFFICIAL_RELEASE: '1'
         if: needs.prepare.outputs.private_alpha != 'true'
         run: cargo build --locked --release --message-format short --target aarch64-apple-darwin
+
+      - name: Preserve final macOS runtime and reclaim compiler space
+        run: |
+          set -euo pipefail
+          df -h . "$RUNNER_TEMP"
+          du -sh target
+          ruby .release-policy/scripts/preserve_macos_runtime.rb "$GITHUB_WORKSPACE"
+          df -h . "$RUNNER_TEMP"
+          du -sh target
 
       - name: Fetch verified analysis model
         if: needs.prepare.outputs.private_alpha != 'true'

@@ -51,6 +51,25 @@ class ReleaseWorkflowTest < Minitest::Test
     assert_equal 'release-retirement-${{ env.RELEASE_TAG }}', step('Save the exact verified retirement inventory').fetch('with').fetch('name')
   end
 
+  def test_macos_reclaims_only_compiler_output_before_packaging_with_pinned_public_policy
+    steps = WORKFLOW.fetch('jobs').fetch('macos').fetch('steps')
+    names = steps.map { |entry| entry['name'] }
+    cleanup = steps.fetch(names.index('Preserve final macOS runtime and reclaim compiler space'))
+    %w[alpha stable].each do |kind|
+      assert_operator names.index("Build #{kind == 'alpha' ? 'private alpha' : kind} arm64"), :<, names.index(cleanup['name'])
+    end
+    assert_operator names.index(cleanup['name']), :<, names.index('App bundle')
+    assert_includes cleanup.fetch('run'), 'ruby .release-policy/scripts/preserve_macos_runtime.rb "$GITHUB_WORKSPACE"'
+    assert_equal 2, cleanup.fetch('run').scan('df -h . "$RUNNER_TEMP"').size
+    assert_equal 2, cleanup.fetch('run').scan('du -sh target').size
+    policy = steps.fetch(names.index('Check out macOS runner maintenance policy')).fetch('with')
+    assert_equal 'crmne/solco-releases', policy.fetch('repository')
+    assert_equal '${{ github.sha }}', policy.fetch('ref')
+    assert_equal '.release-policy', policy.fetch('path')
+    assert_equal false, policy.fetch('persist-credentials')
+    refute cleanup.key?('if'), 'both stable and alpha builds need room for DMG packaging'
+  end
+
   def test_artifact_deletion_follows_verified_publication_and_saved_exact_inventory
     names = ['Retire only the verified older application releases',
              'Verify published downloads and plan package artifact retirement',

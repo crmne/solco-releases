@@ -124,6 +124,24 @@ and [artifact retention](https://github.com/actions/upload-artifact#retention-pe
 
 ## Maintainer commands
 
+On 2026-10-05, macOS packaging reached `hdiutil create` after a successful
+release build and model/runtime validation, then failed with `No space left on
+device`. The failure log did not measure host or image free space. Before
+packaging, the macOS release runner now logs filesystem and Cargo-directory
+sizes, copies the final executable and every adjacent dylib to owned staging,
+and verifies SHA-256, size and mode. Dylib symlinks are resolved before removing
+compiler output. The verified files remain at the original paths required by
+app bundling and portable archives; source, models and package artifacts remain.
+Copy or verification failure preserves the original Cargo tree. This cleanup
+requires the exact GitHub Actions workspace and rejects linked target folders,
+so it is not a local mbx cache-maintenance command. Before/after disk diagnostics
+remain in the job log; signing and notarization checks are unchanged.
+
+For a packaging failure before publication, fix the public workflow and start
+a new dispatch with the same immutable private source tag. Do not rewrite the
+tag or reuse an older workflow revision. Successful packages from an earlier
+attempt remain subject to the verified retirement and expiry policy above.
+
 The normal path is the public `Build release` workflow, dispatched with the
 version and its private source tag:
 

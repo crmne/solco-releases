@@ -201,6 +201,7 @@ jobs:
           ruby scripts/test_release_artifact_retention.rb
           ruby scripts/test_release_workflow.rb
           ruby scripts/test_ci_poll.rb
+          ruby scripts/test_preserve_macos_runtime.rb
 
   recipes:
     name: packaging recipes
