@@ -81,7 +81,7 @@ Keep both files together.
 
 Analysis uses your graphics card when there is one (Metal on macOS, Direct3D 12
 on Windows, Vulkan on Linux) and falls back to the processor otherwise. No CUDA
-or ROCm is needed. Each download is about 120 to 130 MB, analysis models included.
+or ROCm is needed. Each download is about 136 to 147 MB, analysis models included.
 
 ![The zoomed waveform with beat and bar lines, and each track's energy, drive, mood, groove, vocals and peak](docs/screenshots/waveform.webp)
 
