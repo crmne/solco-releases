@@ -62,6 +62,14 @@ installed. Turn checks off, or check now, in **Settings › About**.
 - **Windows:** 64-bit (x86-64).
 - **Linux:** 64-bit x86-64 or ARM64.
 
+Upcoming Windows releases include `solco.com` beside `solco.exe`. Use the
+companion for terminal commands, for example
+`& "$env:LOCALAPPDATA\Programs\Solco\solco.com" list` in PowerShell. It waits
+for completion and preserves output and exit codes. Update scripts that name
+`solco.exe` explicitly to use `solco.com`; shortcuts still open `solco.exe`.
+Keep both files together. Already published releases retain their original
+single-executable command line.
+
 Analysis uses your graphics card when there is one (Metal on macOS, Direct3D 12
 on Windows, Vulkan on Linux) and falls back to the processor otherwise. No CUDA
 or ROCm is needed. Each download is about 120 to 130 MB, analysis models included.

@@ -229,6 +229,11 @@ jobs:
           mkdir -p "dist/$name"
           if [ "${{ runner.os }}" = "Windows" ]; then
             cp "$release/solco.exe" "dist/$name/"
+            # New source tags ship a GUI executable and its console companion.
+            # Old tags retain their original single-executable packaging.
+            if [ -f scripts/windows_launcher.rb ]; then
+              ruby scripts/windows_launcher.rb stage "$release/solco.exe" "dist/$name/solco.com"
+            fi
           else
             cp "$release/solco" "dist/$name/"
           fi
