@@ -132,6 +132,11 @@ gh workflow run release.yml --repo crmne/solco-releases \
   -f version=0.8.0-alpha.1 -f source_ref=v0.8.0-alpha.1
 ```
 
+The scheduled source poll defers a new CI dispatch while another non-scheduled
+CI run is queued, running or waiting. It tries again at the next poll, while
+release-tag discovery continues as a separate step. A deliberate manual CI
+dispatch retains its existing behavior of superseding the previous test run.
+
 To inspect a published release without deleting anything, use a fresh directory
 under `~/.cache` and the public key from that exact private source tag:
 

@@ -69,8 +69,16 @@ jobs:
           tested="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --limit 100 \
             --json displayTitle -q "[.[] | select(.displayTitle == \"CI $sha\")] | length")"
           if [ "$tested" = 0 ]; then
-            gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" -f source_sha="$sha"
-            echo "Started a test run for $sha" >> "$GITHUB_STEP_SUMMARY"
+            # A scheduled dispatch must not supersede a manual/native run that
+            # is still testing the preceding source revision. Try next poll.
+            active="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --limit 100 \
+              --json event,status -q '[.[] | select(.event != "schedule" and .status != "completed")] | length')"
+            if [ "$active" = 0 ]; then
+              gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" -f source_sha="$sha"
+              echo "Started a test run for $sha" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "CI is already active; defer $sha until the next poll" >> "$GITHUB_STEP_SUMMARY"
+            fi
           else
             echo "$sha is already tested" >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -192,6 +200,7 @@ jobs:
           ruby scripts/test_release_retention.rb
           ruby scripts/test_release_artifact_retention.rb
           ruby scripts/test_release_workflow.rb
+          ruby scripts/test_ci_poll.rb
 
   recipes:
     name: packaging recipes
