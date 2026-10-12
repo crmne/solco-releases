@@ -45,8 +45,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Install, upgrade and remove packages built from synthetic payloads
         shell: bash
+        env:
+          SOLCO_MSI_LOGS: ${{ runner.temp }}/msi-logs
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
           # The packages hold copies of Windows tools, never Solco itself.
           ruby scripts/test_windows_msi.rb
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: msiexec-logs
+          retention-days: 3
+          path: ${{ runner.temp }}/msi-logs/
+          if-no-files-found: ignore
