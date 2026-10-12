@@ -287,6 +287,13 @@ jobs:
             tar czf "$name.tar.gz" "$name"
           fi
 
+      # Sources since 0.8.0-alpha.1 also ship a per-user MSI (WiX Toolset 5).
+      - name: Install WiX Toolset 5
+        if: runner.os == 'Windows' && hashFiles('packaging/windows/Solco.wxs') != ''
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build Windows installer
         if: runner.os == 'Windows' && needs.prepare.outputs.private_alpha != 'true'
         shell: pwsh
@@ -314,6 +321,11 @@ jobs:
               -not (Test-Path 'dist/solco-${{ env.RELEASE_TAG }}-windows-x86_64-setup.exe')) {
             throw 'Windows installer was not produced'
           }
+          if (Test-Path 'packaging/windows/Solco.wxs') {
+            $msi = Join-Path $output 'solco-${{ env.RELEASE_TAG }}-${{ matrix.target }}.msi'
+            ruby scripts/package_native.rb msi $source $msi $env:VERSION
+            if ($LASTEXITCODE -ne 0) { throw "MSI build failed with exit code $LASTEXITCODE" }
+          }
 
       - uses: actions/setup-go@v5
         if: runner.os == 'Linux' && needs.prepare.outputs.private_alpha == 'true'
@@ -327,22 +339,39 @@ jobs:
           sudo apt-get install -y libarchive-tools binutils
           go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0
       - name: Build verified native alpha packages
+        id: native
         if: needs.prepare.outputs.private_alpha == 'true'
         shell: bash
         env:
           PACKAGE_TARGET: ${{ matrix.package_target }}
         run: |
           set -euo pipefail
-          gem install native-packages --version 0.8.1 --no-document
+          gem install native-packages --no-document \
+            --version "$(ruby -ryaml -e 'print YAML.load_file("native-packages.yaml").dig("tool", "version")')"
           export SOURCE_DATE_EPOCH="$SOLCO_ALPHA_RELEASED_AT"
           native-packages --config native-packages.yaml build \
             --version "$VERSION" --target "$PACKAGE_TARGET" --output "$RUNNER_TEMP/native-packages"
+          # Bridge releases build the MSI beside the Inno setup program, as its
+          # own target and artifact.
+          if ruby -ryaml -e 'exit YAML.load_file("native-packages.yaml")["targets"].key?(ARGV[0] + "-msi")' "$PACKAGE_TARGET"; then
+            native-packages --config native-packages.yaml build \
+              --version "$VERSION" --target "$PACKAGE_TARGET-msi" --output "$RUNNER_TEMP/native-packages-msi"
+            echo msi=true >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/upload-artifact@v7
         if: needs.prepare.outputs.private_alpha == 'true'
         with:
           name: native-packages-${{ matrix.package_target }}
           retention-days: 1
           path: ${{ runner.temp }}/native-packages/
+          include-hidden-files: true
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        if: steps.native.outputs.msi == 'true'
+        with:
+          name: native-packages-${{ matrix.package_target }}-msi
+          retention-days: 1
+          path: ${{ runner.temp }}/native-packages-msi/
           include-hidden-files: true
           if-no-files-found: error
 
@@ -354,6 +383,7 @@ jobs:
             dist/*.tar.gz
             dist/*.zip
             dist/*-setup.exe
+            dist/*.msi
           if-no-files-found: error
 
   macos:
@@ -485,7 +515,8 @@ jobs:
         if: needs.prepare.outputs.private_alpha != 'true'
         run: |
           set -euo pipefail
-          gem install native-packages --version 0.8.1 --no-document
+          gem install native-packages --no-document \
+            --version "$(ruby -ryaml -e 'print YAML.load_file("native-packages.yaml").dig("tool", "version")')"
           native-packages --config native-packages.yaml build \
             --version "$VERSION" --target macos-arm64 --output "$RUNNER_TEMP/native-stable-macos"
           name="solco-${RELEASE_TAG}-macos-arm64"
@@ -496,7 +527,8 @@ jobs:
         if: needs.prepare.outputs.private_alpha == 'true'
         run: |
           set -euo pipefail
-          gem install native-packages --version 0.8.1 --no-document
+          gem install native-packages --no-document \
+            --version "$(ruby -ryaml -e 'print YAML.load_file("native-packages.yaml").dig("tool", "version")')"
           export SOURCE_DATE_EPOCH="$SOLCO_ALPHA_RELEASED_AT"
           native-packages --config native-packages.yaml build \
             --version "$VERSION" --target macos-arm64 --output "$RUNNER_TEMP/native-packages"
@@ -512,7 +544,8 @@ jobs:
       - name: Sign, notarize and archive portable arm64 code
         run: |
           set -euo pipefail
-          gem install native-packages --version 0.8.1 --no-document
+          gem install native-packages --no-document \
+            --version "$(ruby -ryaml -e 'print YAML.load_file("native-packages.yaml").dig("tool", "version")')"
           name="solco-${RELEASE_TAG}-macos-arm64"
           release="target/aarch64-apple-darwin/release"
           input="$RUNNER_TEMP/portable-input/$name"
@@ -598,7 +631,8 @@ jobs:
         if: needs.prepare.outputs.private_alpha == 'true'
         run: |
           set -euo pipefail
-          gem install native-packages --version 0.8.1 --no-document
+          gem install native-packages --no-document \
+            --version "$(ruby -ryaml -e 'print YAML.load_file("native-packages.yaml").dig("tool", "version")')"
           ruby scripts/collect_alpha_packages.rb "$RUNNER_TEMP/native-package-inputs" \
             "$RUNNER_TEMP/native-packages-complete" dist "$VERSION"
       - uses: actions/setup-go@v5
@@ -613,7 +647,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libarchive-tools binutils rpm
           go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0
-          gem install native-packages --version 0.8.1 --no-document
+          gem install native-packages --no-document \
+            --version "$(ruby -ryaml -e 'print YAML.load_file("native-packages.yaml").dig("tool", "version")')"
           native-packages build --version "$VERSION" --target linux-amd64 --target linux-arm64 \
             --output "$RUNNER_TEMP/stable-linux-packages"
           ruby .release-policy/scripts/collect_stable_packages.rb \
@@ -646,7 +681,8 @@ jobs:
           set -euo pipefail
           test -f assets/update-public-key.hex
           test -n "$SOLCO_UPDATE_SIGNING_KEY"
-          gem install native-packages --version 0.8.1 --no-document
+          gem install native-packages --no-document \
+            --version "$(ruby -ryaml -e 'print YAML.load_file("native-packages.yaml").dig("tool", "version")')"
           native-packages sign-checksums dist/checksums.txt \
             --public-key assets/update-public-key.hex \
             --key-env SOLCO_UPDATE_SIGNING_KEY

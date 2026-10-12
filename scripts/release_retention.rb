@@ -36,9 +36,13 @@ module Solco
           [*other.instance_variable_get(:@numbers), other.alpha ? 0 : 1, other.alpha || 0]
       end
 
+      # The first release after this one ships the Windows MSI package too.
+      LAST_WITHOUT_MSI = 'v0.8.0-alpha.1'
+
       def package_names
         native = tag.delete_prefix('v').tr('-', '.')
-        ["solco-#{tag}-x86_64-unknown-linux-gnu.tar.gz",
+        msi = self > Version.parse(LAST_WITHOUT_MSI) ? ["solco-#{tag}-x86_64-pc-windows-msvc.msi"] : []
+        [*msi, "solco-#{tag}-x86_64-unknown-linux-gnu.tar.gz",
          "solco-#{tag}-aarch64-unknown-linux-gnu.tar.gz",
          "solco-#{tag}-x86_64-pc-windows-msvc.zip",
          "solco-#{tag}-x86_64-pc-windows-msvc-setup.exe",
@@ -245,7 +249,7 @@ module Solco
 
       def verify(release)
         names = release.fetch('assets').map { |asset| asset.fetch('name') }
-        raise 'Release must contain all ten platform packages and the signed checksums, with no other assets' unless names.sort == @version.asset_names
+        raise 'Release must contain every platform package and the signed checksums, with no other assets' unless names.sort == @version.asset_names
         prepare_directory
         hashes = release.fetch('assets').sort_by { |a| a.fetch('name') }.to_h { |a| verified_asset(a) }
         checksums = File.binread(File.join(@directory, 'checksums.txt'))
@@ -259,7 +263,7 @@ module Solco
           match = /\A([0-9a-f]{64})  ([A-Za-z0-9._-]+)\n\z/.match(line) or raise 'Malformed signed checksum manifest'
           [match[2], match[1]]
         end
-        raise 'Signed manifest does not cover exactly the ten platform packages' unless entries.map(&:first).sort == @version.package_names
+        raise 'Signed manifest does not cover exactly the platform packages' unless entries.map(&:first).sort == @version.package_names
         entries.each { |name, digest| raise "Signed checksum mismatch: #{name}" unless hashes.fetch(name) == digest }
         body = release.fetch('body').to_s
         raise 'Published release notes are empty' if body.strip.empty?

@@ -99,6 +99,14 @@ class ReleaseRetentionTest < Minitest::Test
     assert_empty @github.deleted
   end
 
+  def test_releases_after_the_last_inno_only_alpha_ship_the_msi
+    msi = ->(tag) { Retention::Version.parse(tag).package_names.grep(/\.msi\z/) }
+    assert_empty msi.('v0.8.0-alpha.1')
+    assert_empty msi.('v0.7.0-alpha.1')
+    assert_equal ['solco-v0.8.0-alpha.2-x86_64-pc-windows-msvc.msi'], msi.('v0.8.0-alpha.2')
+    assert_equal ['solco-v0.8.0-x86_64-pc-windows-msvc.msi'], msi.('v0.8.0')
+  end
+
   def test_plan_verifies_every_download_and_link_without_deleting
     manifest = policy.plan
     assert_equal [402_724_739], manifest.fetch('retire').map { |r| r.fetch('id') }
@@ -213,12 +221,12 @@ class ReleaseRetentionTest < Minitest::Test
 
   def test_unexpected_new_assets_block
     @new['assets'] << @new['assets'].first.merge('name' => 'model.onnx')
-    assert_blocked(/ten platform packages/) { policy.plan }
+    assert_blocked(/every platform package/) { policy.plan }
   end
 
   def test_every_platform_package_is_required
     @new['assets'].reject! { |a| a['name'].end_with?('aarch64.rpm') }
-    assert_blocked(/ten platform packages/) { policy.plan }
+    assert_blocked(/every platform package/) { policy.plan }
   end
 
   def test_new_release_channel_must_match

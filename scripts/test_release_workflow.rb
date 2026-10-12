@@ -43,7 +43,7 @@ class ReleaseWorkflowTest < Minitest::Test
     uploads = %w[build macos].flat_map do |name|
       WORKFLOW.fetch('jobs').fetch(name).fetch('steps').select { |entry| entry['uses'] == 'actions/upload-artifact@v7' }
     end
-    assert_equal 4, uploads.size
+    assert_equal 5, uploads.size
     uploads.each { |entry| assert_equal 1, entry.fetch('with').fetch('retention-days') }
     audit = step('Save the exact package artifact retirement inventory').fetch('with')
     assert_equal 90, audit.fetch('retention-days')
