@@ -2,7 +2,8 @@
 
 Solco is the prep studio for DJs. It grids every track you add, keys it, hears
 its genre and character, fixes its tags and files it into smart playlists. Then
-it writes the USB drive your CDJs read, no rekordbox needed. Every analysis runs
+it writes the USB drive your CDJs read, no rekordbox needed, or playlists with
+cues and grids for Traktor and other DJ apps. Every analysis runs
 on your own computer, and you can still do any of it by hand.
 
 This is where Solco's builds, updates and support issues live. Learn more at
@@ -18,7 +19,7 @@ This is where Solco's builds, updates and support issues live. Learn more at
 | Platform | File |
 | --- | --- |
 | macOS (Apple Silicon) | `solco-…-macos-arm64.dmg` |
-| Windows | `solco-…-x86_64-pc-windows-msvc-setup.exe` (installer) or the `.zip` (portable) |
+| Windows | `solco-…-x86_64-pc-windows-msvc.msi` (installer) or the `.zip` (portable) |
 | Linux, Debian and Ubuntu | `solco_…_amd64.deb` or `solco_…_arm64.deb` |
 | Linux, Fedora | `solco-….x86_64.rpm` or `solco-….aarch64.rpm` |
 | Linux, any distribution | `solco-…-x86_64-unknown-linux-gnu.tar.gz` or `solco-…-aarch64-unknown-linux-gnu.tar.gz` (portable) |
@@ -38,7 +39,7 @@ next to your file, then:
 
 - **Linux:** `sha256sum --check --ignore-missing checksums.txt`
 - **macOS:** `shasum -a 256 solco-*.dmg`, and compare with the line in `checksums.txt`
-- **Windows (PowerShell):** `Get-FileHash solco-*-setup.exe`, and compare with the line in `checksums.txt`
+- **Windows (PowerShell):** `Get-FileHash solco-*.msi`, and compare with the line in `checksums.txt`
 
 ## Updates
 
