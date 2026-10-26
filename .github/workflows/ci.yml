@@ -17,7 +17,7 @@ run-name: CI ${{ inputs.source_sha || github.event.client_payload.source_sha || 
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '7 * * * *'
   repository_dispatch:
     types: [ci]
   workflow_dispatch:
@@ -116,7 +116,7 @@ jobs:
     # The first build of each platform is cold.
     timeout-minutes: ${{ matrix.os == 'windows-latest' && 120 || 90 }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
