@@ -1,0 +1,140 @@
+name: Build unpublished Windows test installer
+run-name: Windows test installer ${{ inputs.source_sha }}
+
+# Builds the private-alpha MSI exactly as release.yml's Windows build job does,
+# from an exact private source commit, without a tag. It creates no release,
+# tag or retirement plan, has read-only repository permissions and never reads
+# the release-signing environment. The MSI is a workflow artifact kept for one
+# day; its models open only with a licence key.
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Reviewed private source commit (40 lowercase hexadecimal characters)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: '0'
+  TARGET: x86_64-pc-windows-msvc
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - name: Require an exact private source commit
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo 'source_sha must be 40 lowercase hexadecimal characters' >&2; exit 1; }
+      - uses: actions/checkout@v7
+        with:
+          repository: crmne/solco
+          ref: ${{ inputs.source_sha }}
+          ssh-key: ${{ secrets.SOURCE_DEPLOY_KEY }}
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - run: rustup target add x86_64-pc-windows-msvc
+      - name: Version from the crate, alpha metadata and model pins
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(ruby -e 'print File.read("Cargo.toml")[/^version\s*=\s*"([^"]+)"/, 1]')"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=v$version" >> "$GITHUB_ENV"
+          ruby scripts/alpha_release.rb env --version "$version"
+          ruby scripts/models.rb check-native-pins
+      - name: Require the private model revision
+        shell: bash
+        run: test -n "$SOLCO_MODEL_SOURCE_REVISION"
+      - uses: actions/checkout@v7
+        with:
+          repository: crmne/solco
+          ref: ${{ env.SOLCO_MODEL_SOURCE_REVISION }}
+          path: .release-models
+          ssh-key: ${{ secrets.SOURCE_DEPLOY_KEY }}
+          persist-credentials: false
+      - name: Verify and stage every model
+        shell: bash
+        run: ruby scripts/model_archive.rb stage-private "$VERSION" .release-models "$RUNNER_TEMP/alpha-models"
+      - name: Select native Windows Perl for OpenSSL
+        shell: bash
+        run: |
+          ruby <<'RUBY'
+          require 'open3'
+          candidates = ['C:/Strawberry/perl/bin/perl.exe'] +
+            ENV.fetch('PATH').split(File::PATH_SEPARATOR).map { |dir| File.join(dir, 'perl.exe') }
+          perl = candidates.uniq.find do |path|
+            next false unless File.file?(path)
+            platform, _, status = Open3.capture3(path, '-e', 'print $^O')
+            status.success? && platform == 'MSWin32'
+          end
+          abort 'A native Windows Perl installation is required to build OpenSSL' unless perl
+          File.open(ENV.fetch('GITHUB_ENV'), 'a') { |file| file.puts("OPENSSL_SRC_PERL=#{perl}") }
+          RUBY
+      - name: Build private alpha
+        shell: bash
+        env:
+          SOLCO_OFFICIAL_RELEASE: '1'
+        run: |
+          unset MAKE MAKEFLAGS MFLAGS
+          ruby scripts/alpha_release.rb build --version "$VERSION" --target "$TARGET"
+      - name: Bundle Microsoft VC++ runtime
+        shell: pwsh
+        run: |
+          $vswhere = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
+          $installation = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Redist.14.Latest -property installationPath
+          if (-not $installation) { throw 'Visual Studio installation with the VC++ redistributable is unavailable' }
+          $crt = Get-ChildItem (Join-Path $installation 'VC\Redist\MSVC') -Directory | Sort-Object Name -Descending |
+            ForEach-Object { Get-ChildItem (Join-Path $_.FullName 'x64') -Directory -Filter 'Microsoft.VC*.CRT' -ErrorAction SilentlyContinue } |
+            Select-Object -First 1
+          if (-not $crt) { throw 'Microsoft VC++ x64 redistributable directory is unavailable' }
+          Copy-Item (Join-Path $crt.FullName '*.dll') -Destination "target/$env:TARGET/release"
+      - name: Stage the payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          name="solco-${RELEASE_TAG}-${TARGET}"
+          release="target/${TARGET}/release"
+          mkdir -p "dist/$name"
+          cp "$release/solco.exe" "dist/$name/"
+          ruby scripts/windows_launcher.rb stage "$release/solco.exe" "dist/$name/solco.com"
+          shopt -s nullglob
+          for runtime in "$release"/*.dll; do cp -L "$runtime" "dist/$name/"; done
+          cp README.md LICENSE "dist/$name/"
+          printf 'solco-portable-v1\n' > "dist/$name/solco-portable.txt"
+          ruby scripts/models.rb stage "$RUNNER_TEMP/alpha-models" "dist/$name/models"
+          cp release/private-alpha.json "dist/$name/alpha-release.json"
+          cp packaging/PRIVATE-ALPHA.md "dist/$name/"
+      - name: Install WiX Toolset 5
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build the MSI
+        shell: bash
+        run: |
+          set -euo pipefail
+          gem install native-packages --no-document \
+            --version "$(ruby -ryaml -e 'print YAML.load_file("native-packages.yaml").dig("tool", "version")')"
+          export SOURCE_DATE_EPOCH="$SOLCO_ALPHA_RELEASED_AT"
+          native-packages --config native-packages.yaml build \
+            --version "$VERSION" --target windows-amd64-msi --output "$RUNNER_TEMP/native-packages-msi"
+          find "$RUNNER_TEMP/native-packages-msi" -name '*.msi' -exec sha256sum {} \;
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-test-installer
+          retention-days: 1
+          path: ${{ runner.temp }}/native-packages-msi/**/*.msi
+          if-no-files-found: error
