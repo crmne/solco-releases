@@ -330,7 +330,7 @@ jobs:
       - uses: actions/setup-go@v5
         if: runner.os == 'Linux' && needs.prepare.outputs.private_alpha == 'true'
         with:
-          go-version: '1.26.4'
+          go-version: '1.27.3'
           cache: false
       - name: Install alpha Linux package tools
         if: runner.os == 'Linux' && needs.prepare.outputs.private_alpha == 'true'
@@ -638,7 +638,7 @@ jobs:
       - uses: actions/setup-go@v5
         if: needs.prepare.outputs.private_alpha != 'true'
         with:
-          go-version: '1.26.4'
+          go-version: '1.27.3'
           cache: false
       - name: Build stable Linux packages before signing the full download set
         if: needs.prepare.outputs.private_alpha != 'true'
