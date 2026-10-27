@@ -1,7 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["github>crmne/github-automation//renovate/default"],
-  "description": "No tests run on pull requests here, so updates wait for review instead of merging on green.",
+  "description": "CI here does not cover what updates can break, so they wait for review instead of merging on green.",
   "packageRules": [
     {
       "matchPackageNames": ["*"],
