@@ -25,7 +25,31 @@ require_relative 'release_retention'
 
 module Solco
   module LinuxRepositories
-    Version = ReleaseRetention::Version
+    # Release versions: 1.2.3, or a prerelease 1.2.3-alpha.N, -beta.N or
+    # -rc.N, ordered alpha < beta < rc < final. Debian and RPM order
+    # 1.2.3~alpha.1 < 1.2.3~beta.1 < 1.2.3, and Arch's vercmp orders
+    # 1.2.3alpha.1 < 1.2.3beta.1 < 1.2.3 the same way.
+    class Version
+      include Comparable
+      PRERELEASES = %w[alpha beta rc].freeze
+      attr_reader :tag, :prerelease
+
+      def self.parse(tag)
+        match = /\Av(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(alpha|beta|rc)\.([1-9]\d*))?\z/.match(tag.to_s)
+        new(tag, match.captures) if match
+      end
+
+      def initialize(tag, captures)
+        @tag = tag
+        @numbers = captures.take(3).map(&:to_i)
+        @prerelease = captures[3]
+        @number = captures[4].to_i
+      end
+
+      def prerelease? = !@prerelease.nil?
+      def key = [*@numbers, prerelease? ? PRERELEASES.index(@prerelease) : PRERELEASES.size, @number]
+      def <=>(other) = key <=> other.key
+    end
     REPOSITORY = ReleaseRetention::REPOSITORY
     DOWNLOADS = "https://github.com/#{REPOSITORY}/releases/download".freeze
     # GitHub serves this repository's files at /raw/main/ (a redirect to
@@ -73,7 +97,7 @@ module Solco
     # every Linux download, checksums.txt and its signature are uploaded.
     def self.complete?(release, version)
       return false if release.fetch('draft')
-      return false unless release.fetch('prerelease') == !version.alpha.nil?
+      return false unless release.fetch('prerelease') == version.prerelease?
 
       uploaded = release.fetch('assets').select { |a| a.fetch('state', 'uploaded') == 'uploaded' }.map { |a| a.fetch('name') }
       (linux_names(version) + %w[checksums.txt checksums.txt.sig] - uploaded).empty?
@@ -87,7 +111,7 @@ module Solco
       end
       {
         'beta' => published.max_by(&:first),
-        'stable' => published.reject { |version, _| version.alpha }.max_by(&:first)
+        'stable' => published.reject { |version, _| version.prerelease? }.max_by(&:first)
       }.compact
     end
 

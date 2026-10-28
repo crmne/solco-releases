@@ -127,7 +127,7 @@ jobs:
             --current "$aur/PKGBUILD" --output "$aur/PKGBUILD"
           # makepkg writes .SRCINFO; it runs in Arch, as an ordinary user.
           docker run --rm -v "$aur:/pkg:ro" archlinux:latest bash -c \
-            'useradd -m builder && cp /pkg/PKGBUILD /home/builder/ && cd /home/builder &&
+            'useradd -m builder && install -m 644 /pkg/PKGBUILD /home/builder/PKGBUILD && cd /home/builder &&
              su builder -c "makepkg --printsrcinfo"' > "$aur/.SRCINFO"
           grep -q '^pkgbase = solco-bin$' "$aur/.SRCINFO"
           git -C "$aur" status --short

@@ -8,7 +8,7 @@ class LinuxRepositoriesTest < Minitest::Test
   Repositories = Solco::LinuxRepositories
   ROOT = File.expand_path('..', __dir__)
 
-  def release(tag, prerelease: tag.include?('-alpha'), draft: false, missing: [], published_at: '2026-10-28T10:18:30Z')
+  def release(tag, prerelease: tag.include?('-'), draft: false, missing: [], published_at: '2026-10-28T10:18:30Z')
     version = Repositories::Version.parse(tag)
     names = (version ? Repositories.linux_names(version) : []) + %w[checksums.txt checksums.txt.sig] - missing
     {'tag_name' => tag, 'prerelease' => prerelease, 'draft' => draft, 'published_at' => published_at,
@@ -27,7 +27,7 @@ class LinuxRepositoriesTest < Minitest::Test
   class FakeTools
     def deb_control(path)
       architecture = path[/_(amd64|arm64)\.deb\z/, 1]
-      version = File.basename(path)[/\Asolco_(.+)_/, 1].sub(/\.(alpha\.\d+)\z/, '~\1')
+      version = File.basename(path)[/\Asolco_(.+)_/, 1].sub(/\.((?:alpha|beta|rc)\.\d+)\z/, '~\1')
       "Package: solco\nVersion: #{version}\nSection: \nArchitecture: #{architecture}\nDescription: Solco\n"
     end
 
@@ -84,6 +84,20 @@ class LinuxRepositoriesTest < Minitest::Test
     assert_equal 'v1.0.0', channels.fetch('stable').first.tag
     assert_equal({'beta' => 'v1.0.0'}, Repositories.channels([release('v1.0.0')]).slice('beta').transform_values { _1.first.tag })
     refute Repositories.channels([release('v1.0.0-alpha.1')]).key?('stable')
+  end
+
+  def test_beta_follows_alpha_and_precedes_the_release
+    order = %w[v1.0.0-alpha.1 v1.0.0-alpha.10 v1.0.0-beta.1 v1.0.0-beta.2 v1.0.0-rc.1 v1.0.0 v1.0.1-alpha.1]
+    assert_equal order, order.shuffle(random: Random.new(1)).map { Repositories::Version.parse(_1) }.sort.map(&:tag)
+    assert_equal '1.0.0beta.1', Repositories.pkgver(Repositories::Version.parse('v1.0.0-beta.1'))
+    channels = Repositories.channels([release('v1.0.0-alpha.1'), release('v1.0.0-beta.1')])
+    assert_equal 'v1.0.0-beta.1', channels.fetch('beta').first.tag
+    refute channels.key?('stable')
+    assert_includes Repositories.linux_names(Repositories::Version.parse('v1.0.0-beta.1')), 'solco_1.0.0.beta.1_amd64.deb'
+    with_root do |root|
+      update(root, [release('v1.0.0-beta.1')])
+      assert_includes File.read(File.join(root, 'linux/apt/dists/beta/main/binary-amd64/Packages')), "Version: 1.0.0~beta.1\n"
+    end
   end
 
   def test_arch_versions_sort_prereleases_before_their_release
