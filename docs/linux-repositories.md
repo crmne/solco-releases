@@ -32,8 +32,11 @@ the GitHub releases, so a release adds a few kilobytes here, not 600 MB.
   previous release's indexes are kept for that.
 - dnf reads `linux/rpm/<channel>/repodata/`. Each package's `xml:base` is the
   release's download URL. `repo_gpgcheck=1` checks the signed `repomd.xml`,
-  which carries each package's SHA-256. The RPMs themselves are not signed yet
-  (`gpgcheck=0`), so dnf prints "skipped OpenPGP checks" when installing.
+  which carries each package's SHA-256. From the release after 1.0.0-alpha.1
+  the release job also signs the RPMs with the same key, and the `.repo` file
+  sets `gpgcheck=1`. A `.repo` downloaded earlier keeps `gpgcheck=0` until it
+  is downloaded again; 1.0.0-alpha.1's RPMs are unsigned, so dnf prints
+  "skipped OpenPGP checks" for them.
 - `linux/state.json` records which release each channel serves, and the
   SHA-256 of every Linux download, so a run with nothing new does nothing.
 
@@ -44,13 +47,15 @@ needs glibc 2.39.
 ## Signing key
 
 `linux/solco-packages.asc` (RSA 4096, no expiry) signs `InRelease`,
-`Release.gpg` and `repomd.xml.asc`. Its fingerprint is
+`Release.gpg`, `repomd.xml.asc` and the RPMs. Its fingerprint is
 `61A8 5B1F 7706 63CC D1A9  D262 5DF3 0EBB 7D46 44E7`.
 
 The private key and its revocation certificate are in 1Password ("Solco Linux
-package repository signing key (2026-10-28)"). The workflow reads it from the
-`LINUX_REPOSITORY_SIGNING_KEY` secret of the `linux-repositories` environment,
-which only `main` may use, together with `AUR_SSH_KEY` and `AUR_KNOWN_HOSTS`.
+package repository signing key (2026-10-28)"). Workflows read it from the
+`LINUX_REPOSITORY_SIGNING_KEY` secret, together with `AUR_SSH_KEY` and
+`AUR_KNOWN_HOSTS`. All three are in the `release-signing` environment (the
+release job, behind its approval) and in the `linux-repositories` environment
+(the catch-up workflow), which only `main` may use.
 
 To replace the key, commit the new public key to `linux/solco-packages.asc`,
 update the secret, run the workflow with **force**, and tell users to fetch
@@ -59,10 +64,16 @@ inline.
 
 ## Automation
 
-`.github/workflows/linux-repositories.yml` runs when a release build
-finishes, every six hours, and by hand. A first job compares the releases with
-`linux/state.json` and the AUR's version, without secrets. When something lags,
-the second job:
+The release job updates every repository right after it publishes a release
+and before it removes older releases, so apt, dnf and the AUR never name a
+deleted download. The steps live in `.github/actions/linux-repositories`;
+the release job runs them from the published workflow revision, and a failure
+stops the retirement of older releases.
+
+`.github/workflows/linux-repositories.yml` runs the same steps when a release
+build finishes, every six hours and by hand, to catch up after a failure. A
+first job compares the releases with `linux/state.json` and the AUR's
+version, without secrets. When something lags, the second job:
 
 1. checks out the publisher key from the release's private source tag, as the
    release job does, and downloads each channel's `checksums.txt`, its
@@ -75,9 +86,8 @@ the second job:
    `makepkg` in an Arch container and pushes both to the AUR. `pkgrel` goes up
    when only the recipe changes.
 
-Between the release job retiring the previous release and this workflow
-finishing (a few minutes), apt, dnf and the AUR still name the retired
-downloads and fail to fetch them. The next run fixes it.
+Versions are `MAJOR.MINOR.PATCH`, `-alpha.N` or `-beta.N`, ordered alpha <
+beta < final: apt and dnf as `1.0.0~beta.1`, the AUR as `1.0.0beta.1`.
 
 `scripts/test_linux_repositories.rb` covers the channel choice, signature and
 checksum checks, metadata layout, pruning and the AUR versioning.

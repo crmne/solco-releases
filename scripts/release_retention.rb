@@ -16,25 +16,31 @@ module Solco
     REPOSITORY = 'crmne/solco-releases'
     SCHEMA = 1
 
+    # Application versions: 1.2.3, or a prerelease 1.2.3-alpha.N or
+    # 1.2.3-beta.N, ordered alpha < beta < final.
     class Version
       include Comparable
-      attr_reader :tag, :alpha
+      PRERELEASES = %w[alpha beta].freeze
+      attr_reader :tag, :prerelease
 
       def self.parse(tag)
-        match = /\Av(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-alpha\.([1-9]\d*))?\z/.match(tag.to_s)
+        match = /\Av(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(alpha|beta)\.([1-9]\d*))?\z/.match(tag.to_s)
         new(tag, match.captures) if match
       end
 
       def initialize(tag, components)
         @tag = tag
         @numbers = components.take(3).map(&:to_i)
-        @alpha = components[3]&.to_i
+        @prerelease = components[3]
+        @number = components[4].to_i
       end
 
-      def <=>(other)
-        [*@numbers, alpha ? 0 : 1, alpha || 0] <=>
-          [*other.instance_variable_get(:@numbers), other.alpha ? 0 : 1, other.alpha || 0]
-      end
+      # Alphas and betas are published as GitHub prereleases.
+      def prerelease? = !@prerelease.nil?
+
+      def key = [*@numbers, prerelease? ? PRERELEASES.index(@prerelease) : PRERELEASES.size, @number]
+
+      def <=>(other) = key <=> other.key
 
       # The first release after this one ships the Windows MSI package too.
       LAST_WITHOUT_MSI = 'v0.8.0-alpha.1'
@@ -69,7 +75,7 @@ module Solco
     # release mutation. Retained tags remain rebuildable without making retired
     # plaintext-model downloads public again.
     def self.check_publication_version!(releases, tag)
-      target = Version.parse(tag) or raise 'Expected a stable or alpha application version'
+      target = Version.parse(tag) or raise 'Expected a stable, beta or alpha application version'
       releases.each do |release|
         next if release.fetch('draft')
         version = Version.parse(release.fetch('tag_name'))
@@ -82,7 +88,7 @@ module Solco
       target = check_publication_version!(releases, tag)
       selected = releases.find { |r| r.fetch('tag_name') == tag } or raise 'New release is missing'
       raise 'New release is still a draft' if selected.fetch('draft')
-      raise 'Release channel does not match its tag' unless selected.fetch('prerelease') == !target.alpha.nil?
+      raise 'Release channel does not match its tag' unless selected.fetch('prerelease') == target.prerelease?
       retired = []
       preserved = []
       releases.each do |release|
@@ -92,8 +98,8 @@ module Solco
           'draft'
         elsif !version
           'not an application version'
-        elsif target.alpha && !version.alpha
-          'stable channel retained while publishing an alpha'
+        elsif target.prerelease? && !version.prerelease?
+          'stable channel retained while publishing a prerelease'
         elsif version == target
           raise 'Duplicate application version'
         end
@@ -101,7 +107,7 @@ module Solco
           preserved << {'id' => release.fetch('id'), 'tag_name' => release.fetch('tag_name'), 'reason' => reason}
           next
         end
-        raise "Release channel mismatch: #{version.tag}" unless release.fetch('prerelease') == !version.alpha.nil?
+        raise "Release channel mismatch: #{version.tag}" unless release.fetch('prerelease') == version.prerelease?
         names = release.fetch('assets').map { |a| a.fetch('name') }
         unknown = names - version.asset_names
         raise "Unrecognized assets on #{version.tag}: #{unknown.join(', ')}; review them before retirement" unless unknown.empty?

@@ -1,9 +1,10 @@
 # Release retention
 
 Only current application downloads remain available after a successful release.
-An alpha replaces older alphas and keeps stable releases available to clients on
-the stable update channel. A stable release replaces older stable and alpha
-application releases. Drafts and unrelated tags, including model staging tags,
+A prerelease (an alpha or a beta) replaces older prereleases and keeps stable
+releases available to clients on the stable update channel; a beta therefore
+retires the alphas before it. A stable release replaces older stable and
+prerelease application releases. Versions order alpha < beta < final. Drafts and unrelated tags, including model staging tags,
 are preserved. Git tags and repository history are always retained.
 
 This policy applies only to `crmne/solco-releases`. It cannot delete private

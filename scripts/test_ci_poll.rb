@@ -93,4 +93,19 @@ class CiPollTest < Minitest::Test
     assert_operator STEPS.index(tag_step), :>, STEPS.index(STEPS.find { |step| step['run'] == COMMAND })
     assert_includes tag_step.fetch('run'), '-f version="$version" -f source_ref="$tag"'
   end
+
+  def test_the_newest_tag_ranks_alpha_before_beta_before_the_release
+    run = STEPS.find { |step| step['name'] == 'Build the newest version tag unless a release run exists' }.fetch('run')
+    script = run[/python3 -c '\n(.*?)\n\s*'\)"/m, 1].gsub(/^          /, '')
+    newest = lambda do |tags|
+      input = tags.map { |tag| "#{'0' * 40}\trefs/tags/#{tag}\n" }.join
+      output, error, status = Open3.capture3('python3', '-c', script, stdin_data: input)
+      assert status.success?, error
+      output.strip
+    end
+    assert_equal 'v1.0.0-beta.1', newest.call(%w[v1.0.0-alpha.9 v1.0.0-beta.1 v1.0.0-alpha.10 models-v1])
+    assert_equal 'v1.0.0-beta.10', newest.call(%w[v1.0.0-beta.9 v1.0.0-beta.10^{} v1.0.0-alpha.11])
+    assert_equal 'v1.0.0', newest.call(%w[v1.0.0-beta.2 v1.0.0 v1.0.0-rc.1])
+    assert_equal 'v1.0.1-alpha.1', newest.call(%w[v1.0.0 v1.0.1-alpha.1])
+  end
 end

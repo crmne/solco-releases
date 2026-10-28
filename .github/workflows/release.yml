@@ -69,7 +69,7 @@ jobs:
           ruby <<'RUBY'
           require 'open3'
           version = ENV.fetch('VERSION')
-          abort 'Unsupported release version' unless version.match?(/\A(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-alpha\.[1-9][0-9]*)?\z/)
+          abort 'Unsupported release version' unless version.match?(/\A(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-(?:alpha|beta)\.[1-9][0-9]*)?\z/)
           package = File.read('Cargo.toml').split(/^\[package\]\s*$/).fetch(1).split(/^\[/).first
           abort 'Crate and requested versions differ' unless package.match(/^version\s*=\s*"([^"]+)"/)[1] == version
           tag, status = Open3.capture2('git', 'rev-parse', '--verify', "refs/tags/v#{version}^{commit}")
@@ -82,14 +82,15 @@ jobs:
             require_relative 'scripts/lib/alpha_release_notes'
             release = Solco::AlphaRelease.load(Dir.pwd, version: version)
             Solco::AlphaReleaseNotes.read(Dir.pwd)
-            tags, status = Open3.capture2('git', 'tag', '--merged', 'HEAD', '--list', 'v*-alpha.*')
-            abort 'Unable to inspect earlier alpha versions' unless status.success?
+            # Alphas and betas share the private build pipeline and its counter.
+            tags, status = Open3.capture2('git', 'tag', '--merged', 'HEAD', '--list', 'v*-alpha.*', 'v*-beta.*')
+            abort 'Unable to inspect earlier prerelease versions' unless status.success?
             tags.lines.map(&:strip).reject { |name| name == "v#{version}" }.each do |name|
               previous, status = Open3.capture2('git', 'show', "#{name}:release/private-alpha.json")
-              abort "Missing earlier alpha configuration: #{name}" unless status.success?
+              abort "Missing earlier prerelease configuration: #{name}" unless status.success?
               previous = JSON.parse(previous, allow_duplicate_key: false)
               previous = Solco::AlphaRelease.new(previous, version: name.delete_prefix('v'))
-              abort 'Native build counter must increase after earlier alpha tags' unless release.data.fetch('build_number') > previous.data.fetch('build_number')
+              abort 'Native build counter must increase after earlier prerelease tags' unless release.data.fetch('build_number') > previous.data.fetch('build_number')
             end
             puts release.summary
           else
@@ -106,6 +107,18 @@ jobs:
     name: build (${{ matrix.target }})
     needs: prepare
     runs-on: ${{ matrix.os }}
+    # The Windows build signs in to Azure Artifact Signing as the app
+    # registration that trusts only the windows-signing environment, which
+    # only main (the release runs) may use. No secret is stored.
+    environment: ${{ matrix.os == 'windows-latest' && 'windows-signing' || '' }}
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      # Empty outside the windows-signing environment.
+      AZURE_SIGNING_ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+      AZURE_SIGNING_ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+      AZURE_SIGNING_PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
     strategy:
       fail-fast: false
       matrix:
@@ -280,12 +293,52 @@ jobs:
               cp -r --parents packaging/icons/hicolor "dist/$name/"
             fi
           fi
-          cd dist
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            7z a "$name.zip" "$name"
-          else
+          # Windows archives its portable copy once its code is signed.
+          if [ "${{ runner.os }}" != "Windows" ]; then
+            cd dist
             tar czf "$name.tar.gz" "$name"
           fi
+
+      # Sources whose native-packages.yaml has a windows.signing section sign
+      # Solco's own code (solco.exe, solco.com, webgpu_dawn.dll; Microsoft's
+      # libraries keep their signatures) before anything packs it, then the
+      # installers. Older tags rebuild unsigned.
+      - name: Check whether this build signs Windows code
+        id: signing
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "$AZURE_SIGNING_PROFILE" ] &&
+             ruby -ryaml -e 'exit YAML.load_file("native-packages.yaml").dig("windows", "signing") ? 0 : 1'; then
+            gem install native-packages --no-document \
+              --version "$(ruby -ryaml -e 'print YAML.load_file("native-packages.yaml").dig("tool", "version")')"
+            echo enabled=true >> "$GITHUB_OUTPUT"
+          fi
+      - name: Sign in to Azure for code signing
+        if: steps.signing.outputs.enabled == 'true'
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Sign Solco's Windows program and libraries
+        if: steps.signing.outputs.enabled == 'true'
+        shell: pwsh
+        run: |
+          $directory = 'dist/solco-${{ env.RELEASE_TAG }}-${{ matrix.target }}'
+          $unsigned = Get-ChildItem $directory -Recurse -File -Include *.exe, *.com, *.dll |
+            Where-Object { (Get-AuthenticodeSignature $_.FullName).Status -ne 'Valid' } |
+            ForEach-Object { $_.FullName }
+          if (-not ($unsigned -match 'solco\.exe$')) { throw 'solco.exe is missing or already signed' }
+          native-packages sign-windows @unsigned
+          if ($LASTEXITCODE -ne 0) { throw "Signing failed with exit code $LASTEXITCODE" }
+      - name: Archive the Windows portable copy
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          cd dist
+          7z a "solco-${RELEASE_TAG}-${{ matrix.target }}.zip" "solco-${RELEASE_TAG}-${{ matrix.target }}"
 
       # Sources since 0.8.0-alpha.1 also ship a per-user MSI (WiX Toolset 5).
       - name: Install WiX Toolset 5
@@ -326,6 +379,13 @@ jobs:
             ruby scripts/package_native.rb msi $source $msi $env:VERSION
             if ($LASTEXITCODE -ne 0) { throw "MSI build failed with exit code $LASTEXITCODE" }
           }
+      - name: Sign the Windows installers
+        if: steps.signing.outputs.enabled == 'true' && needs.prepare.outputs.private_alpha != 'true'
+        shell: pwsh
+        run: |
+          $installers = Get-ChildItem dist -File -Include *-setup.exe, *.msi -Recurse | ForEach-Object { $_.FullName }
+          native-packages sign-windows @installers
+          if ($LASTEXITCODE -ne 0) { throw "Signing failed with exit code $LASTEXITCODE" }
 
       - uses: actions/setup-go@v7
         if: runner.os == 'Linux' && needs.prepare.outputs.private_alpha == 'true'
@@ -653,6 +713,34 @@ jobs:
             --output "$RUNNER_TEMP/stable-linux-packages"
           ruby .release-policy/scripts/collect_stable_packages.rb \
             "$RUNNER_TEMP/stable-linux-packages" dist "$VERSION"
+      # The RPMs carry the Linux repositories' signature, so dnf checks each
+      # package as well as the signed repository. Signing happens here, behind
+      # the release approval, with the signature time fixed to the source
+      # commit, so a rerun signs the same bytes.
+      - name: Sign the RPM packages
+        env:
+          LINUX_REPOSITORY_SIGNING_KEY: ${{ secrets.LINUX_REPOSITORY_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          rpms=(dist/*.rpm)
+          [ "${#rpms[@]}" -gt 0 ] || exit 0
+          sudo apt-get update
+          sudo apt-get install -y rpm gnupg
+          export GNUPGHOME="$RUNNER_TEMP/rpm-gnupg"
+          mkdir -m 700 "$GNUPGHOME"
+          printf '%s\n' "$LINUX_REPOSITORY_SIGNING_KEY" | gpg --batch --quiet --import
+          fingerprint="$(gpg --show-keys --with-colons .release-policy/linux/solco-packages.asc | awk -F: '/^fpr/ { print $10; exit }')"
+          created="$(gpg --with-colons --list-secret-keys "$fingerprint" | awk -F: '/^sec/ { print $6; exit }')"
+          time="$(git log -1 --format=%ct)"
+          [ "$time" -gt "$created" ] || time=$((created + 1))
+          rpmsign --define "__gpg $(command -v gpg)" --define "_gpg_path $GNUPGHOME" \
+            --define "_gpg_name $fingerprint" \
+            --define "_gpg_sign_cmd_extra_args --faked-system-time ${time}!" --addsign "${rpms[@]}"
+          dbpath="$RUNNER_TEMP/rpmdb"
+          mkdir -p "$dbpath"
+          rpmkeys --dbpath "$dbpath" --import .release-policy/linux/solco-packages.asc
+          rpmkeys --dbpath "$dbpath" --checksig "${rpms[@]}"
       - name: Checksums
         run: |
           ruby <<'RUBY'
@@ -748,6 +836,17 @@ jobs:
           name: release-retirement-${{ env.RELEASE_TAG }}
           path: ${{ runner.temp }}/release-retirement-plan.json
           if-no-files-found: error
+      # apt, dnf, the Nix flake and the AUR move to the new release before
+      # the older ones and their downloads are removed, so none of them names
+      # a deleted file. docs/linux-repositories.md
+      - name: Point the Linux repositories at the new release
+        uses: ./.release-policy/.github/actions/linux-repositories
+        with:
+          public-key: assets/update-public-key.hex
+          signing-key: ${{ secrets.LINUX_REPOSITORY_SIGNING_KEY }}
+          aur-ssh-key: ${{ secrets.AUR_SSH_KEY }}
+          aur-known-hosts: ${{ secrets.AUR_KNOWN_HOSTS }}
+          github-token: ${{ github.token }}
       - name: Retire only the verified older application releases
         env:
           GH_TOKEN: ${{ github.token }}

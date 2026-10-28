@@ -111,6 +111,51 @@ class ReleaseWorkflowTest < Minitest::Test
     end
   end
 
+  def test_linux_repositories_move_to_the_new_release_before_older_ones_go
+    linux = 'Point the Linux repositories at the new release'
+    assert_operator index('Publish public binary release'), :<, index(linux)
+    assert_operator index(linux), :<, index('Retire only the verified older application releases')
+    assert_operator index(linux), :<, index('Retire only the verified release package artifacts')
+    refute step(linux).key?('if'), 'a failed update must stop retirement'
+    refute step(linux).key?('continue-on-error')
+    assert_equal './.release-policy/.github/actions/linux-repositories', step(linux).fetch('uses')
+    assert_equal 'assets/update-public-key.hex', step(linux).dig('with', 'public-key')
+    action = YAML.load_file(File.expand_path('../.github/actions/linux-repositories/action.yml', __dir__))
+    runs = action.dig('runs', 'steps').map { |entry| entry['run'].to_s }.join("\n")
+    %w[linux_repositories.rb\ update linux_repositories.rb\ commit linux_repositories.rb\ pkgbuild makepkg\ --printsrcinfo].each do |command|
+      assert_includes runs, command.delete('\\')
+    end
+  end
+
+  def test_rpms_are_signed_reproducibly_before_the_checksums
+    sign = 'Sign the RPM packages'
+    assert_operator index('Verify the complete native alpha package set'), :<, index(sign)
+    assert_operator index('Build stable Linux packages before signing the full download set'), :<, index(sign)
+    assert_operator index(sign), :<, index('Checksums')
+    run = step(sign).fetch('run')
+    assert_includes run, '--faked-system-time'
+    assert_includes run, 'git log -1 --format=%ct'
+    assert_includes run, 'rpmkeys --dbpath "$dbpath" --checksig'
+    assert_equal '${{ secrets.LINUX_REPOSITORY_SIGNING_KEY }}', step(sign).dig('env', 'LINUX_REPOSITORY_SIGNING_KEY')
+  end
+
+  def test_windows_code_is_signed_before_it_is_packed
+    build = WORKFLOW.fetch('jobs').fetch('build')
+    steps = build.fetch('steps')
+    at = ->(name) { steps.index { |entry| entry['name'] == name } or flunk("missing #{name}") }
+    assert_equal "${{ matrix.os == 'windows-latest' && 'windows-signing' || '' }}", build.fetch('environment')
+    assert_equal({'contents' => 'read', 'id-token' => 'write'}, build.fetch('permissions'))
+    refute_includes steps[at.call('Package')].fetch('run'), '7z a'
+    order = ['Package', 'Check whether this build signs Windows code', 'Sign in to Azure for code signing',
+             "Sign Solco's Windows program and libraries", 'Archive the Windows portable copy',
+             'Build Windows installer', 'Sign the Windows installers', 'Build verified native alpha packages']
+    assert_equal order.map(&at).sort, order.map(&at)
+    assert_includes steps[at.call('Archive the Windows portable copy')].fetch('run'), '7z a'
+    ["Sign Solco's Windows program and libraries", 'Sign the Windows installers'].each do |name|
+      assert_equal "steps.signing.outputs.enabled == 'true'", steps[at.call(name)].fetch('if').split(' && ').first
+    end
+  end
+
   def test_policy_source_is_the_public_workflow_revision_without_saved_credentials
     policy = step('Check out public release policy').fetch('with')
     assert_equal 'crmne/solco-releases', policy.fetch('repository')

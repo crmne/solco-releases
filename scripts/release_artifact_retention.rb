@@ -176,7 +176,7 @@ module Solco
         ReleaseRetention.check_publication_version!(releases, @tag)
         release = releases.find { |entry| entry.fetch('tag_name') == @tag } or raise 'Verified release is missing'
         raise 'Verified release is a draft or has the wrong channel' if release.fetch('draft') ||
-          release.fetch('prerelease') != !@version.alpha.nil?
+          release.fetch('prerelease') != @version.prerelease?
         Time.iso8601(release.fetch('published_at'))
         release
       end

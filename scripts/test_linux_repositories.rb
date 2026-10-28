@@ -27,9 +27,11 @@ class LinuxRepositoriesTest < Minitest::Test
   class FakeTools
     def deb_control(path)
       architecture = path[/_(amd64|arm64)\.deb\z/, 1]
-      version = File.basename(path)[/\Asolco_(.+)_/, 1].sub(/\.((?:alpha|beta|rc)\.\d+)\z/, '~\1')
+      version = File.basename(path)[/\Asolco_(.+)_/, 1].sub(/\.((?:alpha|beta)\.\d+)\z/, '~\1')
       "Package: solco\nVersion: #{version}\nSection: \nArchitecture: #{architecture}\nDescription: Solco\n"
     end
+
+    def rpm_signed?(path) = File.basename(path).include?('beta')
 
     def createrepo(input, output, baseurl)
       names = Dir.children(input).sort
@@ -87,7 +89,7 @@ class LinuxRepositoriesTest < Minitest::Test
   end
 
   def test_beta_follows_alpha_and_precedes_the_release
-    order = %w[v1.0.0-alpha.1 v1.0.0-alpha.10 v1.0.0-beta.1 v1.0.0-beta.2 v1.0.0-rc.1 v1.0.0 v1.0.1-alpha.1]
+    order = %w[v1.0.0-alpha.1 v1.0.0-alpha.10 v1.0.0-beta.1 v1.0.0-beta.2 v1.0.0 v1.0.1-alpha.1]
     assert_equal order, order.shuffle(random: Random.new(1)).map { Repositories::Version.parse(_1) }.sort.map(&:tag)
     assert_equal '1.0.0beta.1', Repositories.pkgver(Repositories::Version.parse('v1.0.0-beta.1'))
     channels = Repositories.channels([release('v1.0.0-alpha.1'), release('v1.0.0-beta.1')])
@@ -97,6 +99,8 @@ class LinuxRepositoriesTest < Minitest::Test
     with_root do |root|
       update(root, [release('v1.0.0-beta.1')])
       assert_includes File.read(File.join(root, 'linux/apt/dists/beta/main/binary-amd64/Packages')), "Version: 1.0.0~beta.1\n"
+      # Signed RPMs: dnf checks each package's signature too.
+      assert_includes File.read(File.join(root, 'linux/rpm/solco-beta.repo')), "gpgcheck=1\n"
     end
   end
 
@@ -184,6 +188,7 @@ class LinuxRepositoriesTest < Minitest::Test
       repo = File.read(File.join(root, 'linux/rpm/solco-stable.repo'))
       assert_includes repo, "baseurl=https://github.com/crmne/solco-releases/raw/main/linux/rpm/stable\n"
       assert_includes repo, "repo_gpgcheck=1\n"
+      assert_includes repo, "gpgcheck=0\n"
       nix = JSON.parse(File.read(File.join(root, 'nix/release.json')))
       assert_equal '1.1.0-alpha.1', nix.fetch('version')
       assert_equal Repositories.sri(Digest::SHA256.hexdigest('solco-v1.1.0-alpha.1-aarch64-unknown-linux-gnu.tar.gz')),

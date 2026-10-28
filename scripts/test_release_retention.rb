@@ -67,7 +67,7 @@ class ReleaseRetentionTest < Minitest::Test
     checksums = bytes.sort.map { |name, body| "#{Digest::SHA256.hexdigest(body)}  #{name}\n" }.join
     bytes['checksums.txt'] = checksums
     bytes['checksums.txt.sig'] = @key.sign(nil, checksums)
-    {'id' => id, 'tag_name' => tag, 'prerelease' => !version.alpha.nil?, 'draft' => false,
+    {'id' => id, 'tag_name' => tag, 'prerelease' => version.prerelease?, 'draft' => false,
      'body' => "A release. [Download](https://github.com/#{Retention::REPOSITORY}/releases/download/#{tag}/#{version.package_names.first})\n![Preview](https://example.test/preview.webp)\nhttps://github.com/user-attachments/assets/video\n",
      'assets' => bytes.sort.map.with_index do |(name, body), index|
        url = "https://github.com/#{Retention::REPOSITORY}/releases/download/#{tag}/#{name}"
@@ -137,6 +137,19 @@ class ReleaseRetentionTest < Minitest::Test
     assert_equal [500, 20, 30, 40], @github.inventory.map { |r| r.fetch('id') }
   end
 
+  def test_beta_supersedes_alphas_and_preserves_stable
+    stable = release('v0.6.0', 20)
+    beta = release('v0.8.0-beta.1', 700)
+    @github.inventory += [stable, beta]
+    manifest = policy('v0.8.0-beta.1').plan
+    assert_equal [402_724_739, 500], manifest.fetch('retire').map { |r| r.fetch('id') }
+    assert_equal [20], manifest.fetch('preserve').map { |r| r.fetch('id') }
+    policy('v0.8.0-beta.1').apply(manifest)
+    assert_equal [20, 700], @github.inventory.map { |r| r.fetch('id') }.sort
+    error = assert_raises(RuntimeError) { Retention.check_publication_version!(@github.inventory, 'v0.8.0-alpha.2') }
+    assert_match(/newer application release exists: v0.8.0-beta.1/, error.message)
+  end
+
   def test_stable_retires_older_stable_and_alpha
     stable = release('v0.8.0', 600)
     @github.inventory += [stable, release('v0.6.0', 20)]
@@ -147,9 +160,9 @@ class ReleaseRetentionTest < Minitest::Test
   end
 
   def test_version_ordering_and_strict_application_tags
-    tags = %w[v0.9.0-alpha.1 v0.8.0 v0.8.0-alpha.10 v0.8.0-alpha.2]
+    tags = %w[v0.9.0-alpha.1 v0.8.0 v0.8.0-beta.2 v0.8.0-beta.1 v0.8.0-alpha.10 v0.8.0-alpha.2]
     assert_equal tags.reverse, tags.map { |tag| Retention::Version.parse(tag) }.sort.map(&:tag)
-    %w[models-v1 v01.2.3 v0.8.0-beta.1 v0.8.0-alpha.0 0.8.0-alpha.1].each do |tag|
+    %w[models-v1 v01.2.3 v0.8.0-rc.1 v0.8.0-beta.0 v0.8.0-alpha.0 0.8.0-alpha.1].each do |tag|
       assert_nil Retention::Version.parse(tag)
     end
   end

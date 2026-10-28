@@ -25,31 +25,9 @@ require_relative 'release_retention'
 
 module Solco
   module LinuxRepositories
-    # Release versions: 1.2.3, or a prerelease 1.2.3-alpha.N, -beta.N or
-    # -rc.N, ordered alpha < beta < rc < final. Debian and RPM order
-    # 1.2.3~alpha.1 < 1.2.3~beta.1 < 1.2.3, and Arch's vercmp orders
-    # 1.2.3alpha.1 < 1.2.3beta.1 < 1.2.3 the same way.
-    class Version
-      include Comparable
-      PRERELEASES = %w[alpha beta rc].freeze
-      attr_reader :tag, :prerelease
-
-      def self.parse(tag)
-        match = /\Av(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(alpha|beta|rc)\.([1-9]\d*))?\z/.match(tag.to_s)
-        new(tag, match.captures) if match
-      end
-
-      def initialize(tag, captures)
-        @tag = tag
-        @numbers = captures.take(3).map(&:to_i)
-        @prerelease = captures[3]
-        @number = captures[4].to_i
-      end
-
-      def prerelease? = !@prerelease.nil?
-      def key = [*@numbers, prerelease? ? PRERELEASES.index(@prerelease) : PRERELEASES.size, @number]
-      def <=>(other) = key <=> other.key
-    end
+    # alpha < beta < final, as Debian and RPM order 1.2.3~alpha.1 <
+    # 1.2.3~beta.1 < 1.2.3 and Arch's vercmp 1.2.3alpha.1 < 1.2.3beta.1 < 1.2.3.
+    Version = ReleaseRetention::Version
     REPOSITORY = ReleaseRetention::REPOSITORY
     DOWNLOADS = "https://github.com/#{REPOSITORY}/releases/download".freeze
     # GitHub serves this repository's files at /raw/main/ (a redirect to
@@ -214,6 +192,15 @@ module Solco
         output
       end
 
+      # Whether the release signed the RPM (its header carries an OpenPGP
+      # signature).
+      def rpm_signed?(path)
+        output, error, status = Open3.capture3('rpm', '-qp', '--nosignature', '--qf', '%{RSAHEADER:pgpsig}', path)
+        raise "Cannot read #{File.basename(path)}: #{error.strip}" unless status.success?
+
+        !output.strip.empty? && output.strip != '(none)'
+      end
+
       def createrepo(input, output, baseurl)
         _output, error, status = Open3.capture3('createrepo_c', '--quiet', '--no-database', '--checksum', 'sha256',
           '--general-compress-type', 'gz', '--baseurl', baseurl, '--outputdir', output, input)
@@ -372,7 +359,7 @@ module Solco
 
     # Writes linux/apt/solco.sources and linux/rpm/solco.repo, the files users
     # download to add a channel, with the public key from linux/.
-    def self.sources(root, channel)
+    def self.sources(root, channel, rpm_signed: false)
       key = File.read(File.join(root, KEY))
       inline = key.lines.map { |line| line.strip.empty? ? " .\n" : " #{line}" }.join
       File.write(File.join(root, 'linux', 'apt', "solco-#{channel}.sources"), <<~SOURCES + inline)
@@ -389,9 +376,9 @@ module Solco
         name=Solco (#{channel})
         baseurl=#{PUBLISHED}/rpm/#{channel}
         enabled=1
-        # The repository metadata is signed and lists each package's SHA-256.
+        # The repository metadata is signed and lists each package's SHA-256#{rpm_signed ? ', and each package is signed too' : ''}.
         repo_gpgcheck=1
-        gpgcheck=0
+        gpgcheck=#{rpm_signed ? 1 : 0}
         gpgkey=#{PUBLISHED}/solco-packages.asc
         metadata_expire=6h
       REPO
@@ -410,7 +397,7 @@ module Solco
         date = Time.iso8601(release.fetch('published_at'))
         Apt.new(root, signer, tools:).write(channel, version, files, checksums, date)
         Rpm.new(root, signer, tools:).write(channel, version, files)
-        sources(root, channel)
+        sources(root, channel, rpm_signed: ARCHITECTURES.all? { |a| tools.rpm_signed?(files.fetch(a.rpm_name(version))) })
         nix(root, version, checksums) if channel == 'beta'
         state['channels'][channel] = published
         changed << channel

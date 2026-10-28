@@ -90,12 +90,13 @@ jobs:
           tag="$(git ls-remote --tags origin 'refs/tags/v*' | python3 -c '
           import re, sys
           def key(tag):
-              match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)(?:-alpha\.(\d+))?", tag)
+              match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta)\.(\d+))?", tag)
               if not match:
                   return None
-              major, minor, patch, alpha = match.groups()
-              # A final release sorts after its alphas.
-              return (int(major), int(minor), int(patch), int(alpha) if alpha else float("inf"))
+              major, minor, patch, stage, number = match.groups()
+              # alpha < beta < the final release.
+              rank = {"alpha": 0, "beta": 1, None: 2}[stage]
+              return (int(major), int(minor), int(patch), rank, int(number or 0))
           tags = {line.split("refs/tags/")[1].strip().removesuffix("^{}") for line in sys.stdin if "refs/tags/" in line}
           ranked = sorted((key(tag), tag) for tag in tags if key(tag))
           print(ranked[-1][1] if ranked else "")
