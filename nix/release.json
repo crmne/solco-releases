@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0-alpha.1",
+  "tag": "v1.0.0-alpha.1",
+  "sources": {
+    "x86_64-linux": {
+      "url": "https://github.com/crmne/solco-releases/releases/download/v1.0.0-alpha.1/solco-v1.0.0-alpha.1-x86_64-unknown-linux-gnu.tar.gz",
+      "hash": "sha256-CZmTThsV/kRpgRT/VQWQu3LPcwpw8b2WgBKVFevuUO4="
+    },
+    "aarch64-linux": {
+      "url": "https://github.com/crmne/solco-releases/releases/download/v1.0.0-alpha.1/solco-v1.0.0-alpha.1-aarch64-unknown-linux-gnu.tar.gz",
+      "hash": "sha256-PVD7qab5H/3s+CvaMbMUvruqSItzPcj0yhyfrBguNyA="
+    }
+  }
+}

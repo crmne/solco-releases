@@ -1,0 +1,10 @@
+# Solco beta builds. Docs: https://github.com/crmne/solco-releases#linux
+[solco-beta]
+name=Solco (beta)
+baseurl=https://github.com/crmne/solco-releases/raw/main/linux/rpm/beta
+enabled=1
+# The repository metadata is signed and lists each package's SHA-256.
+repo_gpgcheck=1
+gpgcheck=0
+gpgkey=https://github.com/crmne/solco-releases/raw/main/linux/solco-packages.asc
+metadata_expire=6h

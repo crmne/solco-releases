@@ -41,6 +41,50 @@ next to your file, then:
 - **macOS:** `shasum -a 256 solco-*.dmg`, and compare with the line in `checksums.txt`
 - **Windows (PowerShell):** `Get-FileHash solco-*.msi`, and compare with the line in `checksums.txt`
 
+## Linux
+
+Install Solco from your package manager to get each new beta with your other
+updates. Every route installs the official downloads from this page.
+
+**Debian 13 or later, Ubuntu 24.04 or later:**
+
+```sh
+sudo wget -qO /etc/apt/sources.list.d/solco.sources https://github.com/crmne/solco-releases/raw/main/linux/apt/solco-beta.sources
+sudo apt update && sudo apt install solco
+```
+
+**Fedora 40 or later:**
+
+```sh
+sudo curl -fsSLo /etc/yum.repos.d/solco.repo https://github.com/crmne/solco-releases/raw/main/linux/rpm/solco-beta.repo
+sudo dnf install solco
+```
+
+dnf asks once to import Solco's package key. Its fingerprint is
+`61A8 5B1F 7706 63CC D1A9  D262 5DF3 0EBB 7D46 44E7`.
+
+**Arch Linux** ([AUR](https://aur.archlinux.org/packages/solco-bin)), with an
+AUR helper such as `yay` or `paru`:
+
+```sh
+yay -S solco-bin
+```
+
+**NixOS and Nix** (with flakes enabled):
+
+```sh
+nix run github:crmne/solco-releases
+nix profile add github:crmne/solco-releases
+```
+
+(Older Nix versions use `nix profile install`.) On NixOS, add the flake as an
+input and `inputs.solco.packages.${pkgs.system}.solco` to
+`environment.systemPackages`.
+
+Update with `sudo apt upgrade`, `sudo dnf upgrade`, your AUR helper,
+`nix profile upgrade --all` or `nix flake update solco`. How the repositories
+work: [docs/linux-repositories.md](docs/linux-repositories.md).
+
 ## Updates
 
 Solco checks this page for a newer release when it starts and once a day after
@@ -60,8 +104,9 @@ describes these checks.
 
 - The macOS app, the Windows installer and the portable Windows and Linux
   archives update themselves.
-- A DEB or RPM installed through your package manager updates by installing the
-  new package from this page.
+- Copies installed with apt, dnf, the AUR or Nix update through that package
+  manager (see [Linux](#linux)). A DEB or RPM downloaded from this page updates
+  by installing the new package from this page.
 - When a release changes the bundled analysis models, its release notes ask
   portable copies to download the full archive once.
 

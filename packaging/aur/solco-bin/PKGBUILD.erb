@@ -1,0 +1,54 @@
+# Maintainer: Carmine Paolino <carmine@paolino.me>
+#
+# Generated for each Solco release by crmne/solco-releases
+# (packaging/aur/solco-bin/PKGBUILD.erb). Changes belong there.
+#
+# Solco is proprietary: this installs the official Debian package's files
+# unchanged. It needs a licence key from https://getsolco.com.
+
+pkgname=solco-bin
+_tag=<%= tag %>
+pkgver=<%= pkgver %>
+pkgrel=<%= pkgrel %>
+pkgdesc='Prep studio for DJs: grids, keys, tags, smart playlists and USB exports for CDJs (private beta, needs a licence key)'
+arch=('x86_64' 'aarch64')
+url='https://getsolco.com'
+license=('LicenseRef-Solco')
+depends=(
+  'alsa-lib'
+  'dbus'
+  'gcc-libs'
+  'glibc'
+  'hicolor-icon-theme'
+  'libglvnd'
+  'libpipewire'
+  'libx11'
+  'libxcursor'
+  'libxi'
+  'libxkbcommon'
+  'libxkbcommon-x11'
+  'openssl'
+  'vulkan-icd-loader'
+  'wayland'
+)
+optdepends=(
+  'vulkan-driver: analyse on the graphics card'
+  'xdg-desktop-portal: file and folder pickers'
+  'zenity: file and folder pickers without a desktop portal'
+  'polkit: password prompt for making a USB drive write quickly'
+)
+provides=('solco')
+conflicts=('solco')
+options=('!debug' '!strip')
+<% sources.each do |source| -%>
+source_<%= source[:arch] %>=("solco-${_tag}-<%= source[:deb] %>.deb::<%= source[:url].sub(tag, '${_tag}') %>")
+<% end -%>
+<% sources.each do |source| -%>
+sha256sums_<%= source[:arch] %>=('<%= source[:sha256] %>')
+<% end -%>
+
+package() {
+  bsdtar -xf data.tar.* -C "${pkgdir}"
+  # Arch keeps a package's licence under its own name.
+  mv "${pkgdir}/usr/share/licenses/solco" "${pkgdir}/usr/share/licenses/${pkgname}"
+}

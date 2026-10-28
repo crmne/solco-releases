@@ -1,0 +1,33 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Origin: Solco
+Label: Solco
+Suite: beta
+Codename: beta
+Date: Wed, 28 Oct 2026 10:18:30 UTC
+Architectures: amd64 arm64
+Components: main
+Description: Solco beta builds, from https://github.com/crmne/solco-releases/releases
+Acquire-By-Hash: yes
+SHA256:
+ 1ad1dcd960bfa7ddb6813d11cae392b27a63a9117ae2360ed7537b7867aa52ee 631 main/binary-amd64/Packages
+ 8c74ce5206916e952b7656aad84aae5e750e16ecd399a4fa18496c80511cfcf8 422 main/binary-amd64/Packages.gz
+ 1c12a177b17c82e1c7e901f188a4db7885a6b76388991d01ce61e740c92e0480 631 main/binary-arm64/Packages
+ ab9e9a4b88c27426c8b192ce28f5267cea4db299b8ee8f6d56730e227b9ea0da 423 main/binary-arm64/Packages.gz
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCgAdFiEEYahbH3cGY8zRqdJiXfMOu31GROcFAmrh0xcACgkQXfMOu31G
+ROcHtw//cwv74xuI/UvmrGE0Yz/5zJEr/27H+gqMkdaOxcGYHm6kXSLyRK5i/UiN
+FJ+jluUeA39CUMg/LMxhKRebJzLQNkmHS62YyW1XyZKRW2AD1IPzzSaRYoz1Eydr
+lO4rRu8HZJlljjodzeAVqHH7E/FuIvIZcTKoAxROjJfZPgTrpQUviP3NHkfvREXE
+atBvVK1I6rBjoPKqO+ZyHae8gfbp0JWjm+kkIyF0PirZ+Vnx7u2Rvzr3Sqg48RJQ
+Nv9mtmLw6lPRNcXAWnyt7dK/Bz3TMCeofJlw/StMdwNlo3611bxhMVDuhKIdEgcA
+HAkrISLvYi69N1oMFABVZscsJLAqLM2TEvbDdeYhEhagCnlVT9sSQVbhKf7Ri7R7
+H65NlGG3vQ8Z/jdYmNdeS6VGR4Fqvk7vYToGQqZ1GUwln2THgq5rAA7uMC+g2H1m
+jVFPRQ+gWLKpsDexZG3F4fme3E+sajBmQjEJJbW8X1D9TF5YeWQZekA3c9FQEegl
+bJAbGSCdhz8paUGzm93nKce1abw7e0szgVL152SKS9JWKtZoCzfQe0ehafiSPkGr
+2+TPuDbQBro+PZP6Cs4M6xuVkkXxCQoBIxOw7UBnpxEQdIMw2mBUFa9FGc6bneZj
+HAmPcc9unU6B+fNZLgyeCCs1lSJ19q9MgfN66QSKloi4R7RjOY0=
+=KCA5
+-----END PGP SIGNATURE-----
