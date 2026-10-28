@@ -24,13 +24,16 @@ This is where Solco's builds, updates and support issues live. Learn more at
 | Linux, Fedora | `solco-….x86_64.rpm` or `solco-….aarch64.rpm` |
 | Linux, any distribution | `solco-…-x86_64-unknown-linux-gnu.tar.gz` or `solco-…-aarch64-unknown-linux-gnu.tar.gz` (portable) |
 
-Solco is in alpha. Local preparation needs no account or license key. Builds run for
-30 days after their release, by which time a newer one is out. Keep a backup of
-your music and library, and use a spare drive for your first exports.
+Solco is in private beta. Anyone can download it, and it works with a personal
+licence key: join the waitlist at [getsolco.com](https://getsolco.com) and your key
+comes by email. Activating it needs the internet once, then Solco works offline.
+A key works on up to three of your computers and renews by itself while the beta
+runs; builds don't expire. Keep a backup of your music and library, and use a
+spare drive for your first exports.
 
-The Solco-funded playlist assistant requires an invitation and your permission
-to share requests and an aggregate library summary. You can also choose your
-own provider under **Connection**. Local analysis and export do not need it.
+Your licence key also turns on the playlist assistant. Sending it a message
+shares your request and the titles and characteristics of the tracks it looks
+up, never audio or file paths. Analysis and export work without it.
 
 ### Check your download
 
@@ -118,7 +121,7 @@ describes these checks.
 - **Windows:** 64-bit (x86-64).
 - **Linux:** 64-bit x86-64 or ARM64.
 
-Windows 0.8 and later include `solco.com` beside `solco.exe`. Use the
+Windows builds include `solco.com` beside `solco.exe`. Use the
 companion for terminal commands, for example
 `& "$env:LOCALAPPDATA\Programs\Solco\solco.com" list` in PowerShell. It waits
 for completion and preserves output and exit codes. Update scripts that name
@@ -129,7 +132,7 @@ Analysis uses your graphics card when there is one (Metal on macOS, Direct3D 12
 on Windows, Vulkan on Linux) and falls back to the processor otherwise. No CUDA
 or ROCm is needed. Each download is about 136 to 147 MB, analysis models included.
 
-![The zoomed waveform with beat and bar lines, and each track's energy, drive, mood, groove, vocals and peak](docs/screenshots/waveform.webp)
+![The zoomed waveform with beat and bar lines, and each track's characteristics](docs/screenshots/waveform.webp)
 
 ## Feedback and support
 
@@ -140,13 +143,13 @@ or ROCm is needed. Each download is about 136 to 147 MB, analysis models include
 - **Bugs:** [open an issue](https://github.com/crmne/solco-releases/issues) with
   what you did, what you expected and your Solco version (shown in
   **Settings › About**). Leave out anything private.
-- **Error and crash reports** are sent automatically by official release builds
-  so problems can be fixed without you reporting them. Development and QA
-  builds do not send them. Reports can name tracks, but do not include audio,
-  library contents or your user folder's name.
-- **Usage counts:** official builds send a daily ping with a random installation
-  ID, version and operating system. Turn it off in **Settings › About**. The
-  [app privacy notice](https://getsolco.com/app-privacy/) explains these counts,
+- **Error and crash reports** are your choice: Solco's first screen asks, and
+  **Settings › About** changes it later. With them off, Solco asks after a crash
+  before sending anything. Reports can name tracks, but never include audio,
+  your library or your user folder's name.
+- **Update checks** count checks by day, version, system and processor, and keep
+  nothing that tells anyone apart. Turn them off in **Settings › About**. The
+  [app privacy notice](https://getsolco.com/app-privacy/) explains update checks,
   assistant sharing and error reports.
 
 ## About this repository
