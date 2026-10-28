@@ -1,14 +1,14 @@
 {
   "channels": {
     "beta": {
-      "tag": "v1.0.0-alpha.1",
+      "tag": "v1.0.0-beta.1",
       "sha256": {
-        "solco-1.0.0.alpha.1-1.aarch64.rpm": "20c3cf539c55701717f261fa36801c5c742c7378b738841d02eca4594269334b",
-        "solco-1.0.0.alpha.1-1.x86_64.rpm": "e79f5f4426255fb01ff6871a56fd0e29b3ec12ba1b87d818883aaa7d3fbd7ae5",
-        "solco-v1.0.0-alpha.1-aarch64-unknown-linux-gnu.tar.gz": "3d50fba9a6f91ffdecf82bda31b314bebbaa488b733dc8f4ca1c9fac182e3720",
-        "solco-v1.0.0-alpha.1-x86_64-unknown-linux-gnu.tar.gz": "0999934e1b15fe44698114ff550590bb72cf730a70f1bd9680129515ebee50ee",
-        "solco_1.0.0.alpha.1_amd64.deb": "ed1ccc58e4da0c8edc3a2752efb059da2da2ab4944b6235a085de8e12ee69f4c",
-        "solco_1.0.0.alpha.1_arm64.deb": "ac232f232cffe8540c1490c22d76f2fffab93fbbdb031916e9f64087e9b05676"
+        "solco-1.0.0.beta.1-1.aarch64.rpm": "8ad7060d7a47059d8e57c05f02cbc2c3d4bfa295072e9fca3db79007d4c02e6e",
+        "solco-1.0.0.beta.1-1.x86_64.rpm": "23c34cebe7000d426b20188ac7a99b020766d7f0754e448d5242f76d43a8f381",
+        "solco-v1.0.0-beta.1-aarch64-unknown-linux-gnu.tar.gz": "4048a9d9ad7abebf6902d1fbf0aa33ba05d37df685cf72a89fe0398c196b06e3",
+        "solco-v1.0.0-beta.1-x86_64-unknown-linux-gnu.tar.gz": "06ec37de65daaa3d702562470f610fcf4973f1fa61e1d734fb237b6fff9a52ba",
+        "solco_1.0.0.beta.1_amd64.deb": "af370a759ee12c3e6fbc426a611d66294b732e4bdd23a006ef872be77b9b24d1",
+        "solco_1.0.0.beta.1_arm64.deb": "b9087b034e63c5c855cb8b80dfa7e5b187809642970d4bf23eac0fc945ce132a"
       }
     }
   }
