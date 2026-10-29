@@ -79,6 +79,8 @@ jobs:
     - name: Build private alpha arm64
       env:
         SOLCO_OFFICIAL_RELEASE: '1'
+        # Unpublished QA builds must never send reports to production.
+        SOLCO_SENTRY_DSN: ''
       run: ruby scripts/alpha_release.rb build --version "$VERSION" --target aarch64-apple-darwin
     - name: Preserve final macOS runtime and reclaim compiler space
       run: |

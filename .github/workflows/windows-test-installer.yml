@@ -87,6 +87,8 @@ jobs:
         shell: bash
         env:
           SOLCO_OFFICIAL_RELEASE: '1'
+          # Unpublished QA builds must never send reports to production.
+          SOLCO_SENTRY_DSN: ''
         run: |
           unset MAKE MAKEFLAGS MFLAGS
           ruby scripts/alpha_release.rb build --version "$VERSION" --target "$TARGET"
