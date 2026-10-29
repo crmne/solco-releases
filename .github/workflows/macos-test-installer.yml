@@ -1,0 +1,118 @@
+# Builds an ad-hoc signed private beta DMG for native testing before tagging.
+# No release or tag is created, and release signing secrets are not read.
+---
+name: Build unpublished macOS test installer
+run-name: macOS test installer ${{ inputs.source_sha }}
+'on':
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Reviewed private source commit (40 lowercase hexadecimal characters)
+        required: true
+        type: string
+permissions:
+  contents: read
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: '0'
+jobs:
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 120
+    steps:
+    - name: Require an exact private source commit
+      shell: bash
+      env:
+        SOURCE_SHA: "${{ inputs.source_sha }}"
+      run: '[[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo ''source_sha must be 40
+        lowercase hexadecimal characters'' >&2; exit 1; }
+
+        '
+    - name: Check out private source
+      uses: actions/checkout@v7
+      with:
+        repository: crmne/solco
+        ref: "${{ inputs.source_sha }}"
+        ssh-key: "${{ secrets.SOURCE_DEPLOY_KEY }}"
+        persist-credentials: false
+    - name: Check out macOS runner maintenance policy
+      uses: actions/checkout@v7
+      with:
+        repository: crmne/solco-releases
+        ref: "${{ github.sha }}"
+        path: ".release-policy"
+        persist-credentials: false
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '4.0'
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: aarch64-apple-darwin
+    - run: rustup target add aarch64-apple-darwin
+    - name: Set the reviewed macOS deployment target
+      run: |
+        set -euo pipefail
+        minimum="$(ruby scripts/macos_runtime.rb minimum)"
+        echo "MACOSX_DEPLOYMENT_TARGET=$minimum" >> "$GITHUB_ENV"
+    - name: Load fixed alpha metadata and complete models
+      run: |
+        set -euo pipefail
+        version="$(ruby -e 'print File.read("Cargo.toml")[/^version\s*=\s*"([^"]+)"/, 1]')"
+        echo "VERSION=$version" >> "$GITHUB_ENV"
+        ruby scripts/alpha_release.rb env --version "$version"
+        ruby scripts/models.rb check-native-pins
+    - name: Require the private model revision
+      shell: bash
+      run: test -n "$SOLCO_MODEL_SOURCE_REVISION"
+    - name: Check out the pinned private model bundle
+      uses: actions/checkout@v7
+      with:
+        repository: crmne/solco
+        ref: "${{ env.SOLCO_MODEL_SOURCE_REVISION }}"
+        path: ".release-models"
+        ssh-key: "${{ secrets.SOURCE_DEPLOY_KEY }}"
+        persist-credentials: false
+    - name: Verify and stage every model
+      shell: bash
+      run: ruby scripts/model_archive.rb stage-private "$VERSION" .release-models
+        "$RUNNER_TEMP/alpha-models"
+    - name: Build private alpha arm64
+      env:
+        SOLCO_OFFICIAL_RELEASE: '1'
+      run: ruby scripts/alpha_release.rb build --version "$VERSION" --target aarch64-apple-darwin
+    - name: Preserve final macOS runtime and reclaim compiler space
+      run: |
+        set -euo pipefail
+        df -h . "$RUNNER_TEMP"
+        du -sh target
+        ruby .release-policy/scripts/preserve_macos_runtime.rb "$GITHUB_WORKSPACE"
+        df -h . "$RUNNER_TEMP"
+        du -sh target
+    - name: App bundle
+      run: |
+        set -euo pipefail
+        bash packaging/macos/bundle.sh \
+          target/aarch64-apple-darwin/release/solco \
+          Solco.app "$VERSION" "$RUNNER_TEMP/alpha-models" \
+          "$SOLCO_MACOS_VERSION" "$SOLCO_MACOS_BUILD_VERSION"
+        cp release/private-alpha.json Solco.app/Contents/Resources/alpha-release.json
+        cp packaging/PRIVATE-ALPHA.md Solco.app/Contents/Resources/
+        chmod 644 Solco.app/Contents/Resources/{alpha-release.json,PRIVATE-ALPHA.md}
+    - name: Ad-hoc sign local app
+      run: codesign --force --deep --sign - Solco.app
+    - name: Verify local app bundle
+      run: codesign --verify --deep --strict --verbose=2 Solco.app
+    - name: Build verified native alpha DMG
+      run: |
+        set -euo pipefail
+        gem install native-packages --no-document \
+          --version "$(ruby -ryaml -e 'print YAML.load_file("native-packages.yaml").dig("tool", "version")')"
+        export SOURCE_DATE_EPOCH="$SOLCO_ALPHA_RELEASED_AT"
+        native-packages --config native-packages.yaml build \
+          --version "$VERSION" --target macos-arm64 --output "$RUNNER_TEMP/native-packages"
+    - uses: actions/upload-artifact@v7
+      with:
+        name: macos-test-installer
+        retention-days: 1
+        path: "${{ runner.temp }}/native-packages/**/*.dmg"
+        if-no-files-found: error
