@@ -117,7 +117,9 @@ jobs:
     # The first build of each platform is cold.
     timeout-minutes: ${{ matrix.os == 'windows-latest' && 120 || 90 }}
     strategy:
-      fail-fast: true
+      # Keep each platform's failure details: cancelling a sibling while its
+      # tests run loses Rust's final assertion report and forces another build.
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
