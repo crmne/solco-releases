@@ -136,15 +136,16 @@ or ROCm is needed. Each download is about 136 to 147 MB, analysis models include
 
 ## Feedback and support
 
-- **Feedback:** click the Feedback icon at the top of the sidebar, beside
+- **Feedback:** click the question bubble at the top of the sidebar, after
   Add a music folder and Settings. It starts a conversation with the Solco
   team, and replies appear in the same place. **Tell us**, next to anything
   that needs you, starts one with the error already filled in.
 - **Bugs:** [open an issue](https://github.com/crmne/solco-releases/issues) with
   what you did, what you expected and your Solco version (shown in
   **Settings › About**). Leave out anything private.
-- **Error and crash reports** are your choice: Solco's first screen asks, and
-  **Settings › About** changes it later. With them off, Solco asks after a crash
+- **Error and crash reports** are on by default for a new installation. Your
+  saved choice is kept, and **Settings › About** lets you turn them off.
+  With them off, Solco asks after a crash
   before sending anything. Reports can name tracks, but never include audio,
   your library or your user folder's name.
 - **Update checks** count checks by day, version, system and processor, and keep
