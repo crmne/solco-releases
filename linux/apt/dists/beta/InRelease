@@ -5,29 +5,29 @@ Origin: Solco
 Label: Solco
 Suite: beta
 Codename: beta
-Date: Thu, 29 Oct 2026 16:34:27 UTC
+Date: Fri, 30 Oct 2026 07:38:43 UTC
 Architectures: amd64 arm64
 Components: main
 Description: Solco beta builds, from https://github.com/crmne/solco-releases/releases
 Acquire-By-Hash: yes
 SHA256:
- e2ea05f49e270adf53ade2ac7aaad244ac867a49d0a0885ccc8923afc362eff5 617 main/binary-amd64/Packages
- a80966f7921a5ed8a685f5270d0d42b8fb45f8dadd2ce0e1ca51ae1f52b117fd 415 main/binary-amd64/Packages.gz
- fc7f780af89bc328a857af26afdf4fe483fa007bac051ce4025d31f7e27120a5 617 main/binary-arm64/Packages
- 643ec5efae3eab475c376e7ada18462f5eef9cae2bca31bc549bb9a56ef3f41e 415 main/binary-arm64/Packages.gz
+ 38b3d7f5bf7e1bef60541ddf0da660e52e5ae459689787a3c668e35151bd83ab 617 main/binary-amd64/Packages
+ 056638f9fadaa4dc95ac58bdcc5738dddd786ea6c1f6ba0bc592a966e5db8835 416 main/binary-amd64/Packages.gz
+ 22697df5a1a1f2853ca7d8803bfa9bd99f2d81959dac0bcf63152db3f4f391c4 617 main/binary-arm64/Packages
+ 7ba1eae4cbadfde8b7543378a3106397b890a3b44f219148e3c8594d57f582b3 416 main/binary-arm64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEYahbH3cGY8zRqdJiXfMOu31GROcFAmrjdcgACgkQXfMOu31G
-ROcIvQ//cVm1o/vmoC++bEfrGsFPJZ2cmYawbhZ1hT6iVxDesI1K2AOa0hvF0IUh
-vXVPtOMlKzqys6FsPD3KGtaI+djjXSe9kEjXgvJ5pVK6XBwCGk9vVfnJT6dO9gIZ
-QzlSlu05zNRpXTdNrCwYypN4UCxJJ/P+Jw/fNWRup+vwu5I+GQNSJp50P9uuBTVb
-0n7iTIvksV9mdU4bEDRmqXy7jyEEVBQ3e5KDOQjBb7fWsZxDzku+6ICoCjoINWML
-T0+bLdFBAkl3pHfrgxVMFUyUpJhdn4WGDp23fI9h5vOI5WBjbmXyvHAgQaLBAi+v
-YLjan9Kk1WnXg+I/WIkoqp9tiXul8o3bwarG5miwZOGhL2M2ZnKhzJa2rqvlI3r/
-KpK7DXZsBFjTDaW3n+wPLQrXkX4C54FpS/wCkhLXd1osikUu+SlqFH93a+iyekAk
-TX3OY0KOI2U7ZRoA9L9xPM9z6iMCLS5sfiDAFz31ZtLkeCzH+YLUmpOLKq644fbF
-hfl2yriRwok6MSXkhL8djw/HOqTeacORClaKhkIqtRh0no1FD5cmPXvj1I2NRNY4
-V6edAE/jGymy+xddlvgISQjCQvDMF1LuX8KMTixfzQoKXWq3bAQI5gNq8xsiuLnL
-PIwq+kF5L9j4QytbQMmJW5a9q1FOc7VTYjlXXK85cJb47uhQ/ng=
-=OmV3
+iQIzBAEBCgAdFiEEYahbH3cGY8zRqdJiXfMOu31GROcFAmrkScIACgkQXfMOu31G
+ROfqcBAApzXZG0vlegx382/yNIgvDpxezCfjCk5LaacSk0IxR7ZyJ08ox5tajPvx
+v/veFcFtbV+CXwM367hdXix1MjDYxEI83TVIWZDbyNpD+yBAsw9dPbtqp0Sil1nt
+WJwKj8+hVU3vQlfh5YhUeOgO1iBJdZtS0PsNvRsWxmDUzZGym9H0ryHT7bC+Pc75
+HFxQrkYKdKl6SK5UlXUxiE+N5b/OCaIy59DUFEe3Ughtsh0g8NA0LADvzsLVEte3
+AD2VLNaXMm1H7Z/N0rDK+SjZEFPj7zWcsMnfhgT+PiAEp3iTxktaslRmzAL3XKnz
+JOqwvGOXW2bBt8JYbmzMlBGMD75KJu2IleQ8sGf2+R3Zwug9OtKqiPNxQ9ftlPdt
+Qd4Kxh2CFpGAplvXZQex/EUoIwJj7TGbV1/2e9tClrMB+WLu8hHiVVyE7v+uoGUF
+ADAEEwlWuu99tm6KMyZo7rGPkBvtjSSnDCoZC/fRj9sXMkYt5HY9nSDQW0TcWCoV
+3GphnRXxsYhjuqgCT3R8G+Q1zXtRsafjsMbPgOurjM3iT8YbZ3taj2iJQhwV9+Ih
+Zj50VmLdU2leXoO5Z0qtxq9XTwX6NSJgynpg8TxvePXWZWKQPX1OLfRrbDGK1Ovs
+QHaQpNDxmeOmC4ovMI3jZNSxTJOlMGM+AD65LMP7ac9bEVOi/uE=
+=411w
 -----END PGP SIGNATURE-----
