@@ -1,12 +1,12 @@
 Package: solco
-Version: 1.0.0~beta.4
+Version: 1.0.0~beta.5
 Priority: optional
 Architecture: amd64
 Maintainer: Carmine Paolino <carmine@paolino.me>
-Installed-Size: 218379
+Installed-Size: 218934
 Depends: libgl1, libxkbcommon0, libwayland-client0, libx11-6, libasound2, libpipewire-0.3-0t64 (>= 0.3.53) | libpipewire-0.3-0 (>= 0.3.53), libgcc-s1, libstdc++6, libpipewire-0.3-0, libssl3, libc6 (>= 2.39)
 Homepage: https://getsolco.com
 Description: DJ library preparation and export application
-Filename: ../../../../releases/download/v1.0.0-beta.4/solco_1.0.0.beta.4_amd64.deb
-Size: 151185816
-SHA256: bb38a0dca9ea60bd0e7ca47c8115e8a9769a5722ce808f2d34cabcf60cd6cbc0
+Filename: ../../../../releases/download/v1.0.0-beta.5/solco_1.0.0.beta.5_amd64.deb
+Size: 151333768
+SHA256: 276e7b6f2934e108406db0da2352eb42ceced3adfe12555abfb4f803d66ac571

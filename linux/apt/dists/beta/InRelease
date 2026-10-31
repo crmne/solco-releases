@@ -5,29 +5,29 @@ Origin: Solco
 Label: Solco
 Suite: beta
 Codename: beta
-Date: Fri, 30 Oct 2026 16:19:34 UTC
+Date: Sat, 31 Oct 2026 11:31:39 UTC
 Architectures: amd64 arm64
 Components: main
 Description: Solco beta builds, from https://github.com/crmne/solco-releases/releases
 Acquire-By-Hash: yes
 SHA256:
- cd04e53fb4491696c296e9a63aed3533782777879888db1b08829677bf8a6486 617 main/binary-amd64/Packages
- 382442e29dd67b547babde6937027ceb43d7f7b7cc8d89f0b7b0bcabd0fb8759 415 main/binary-amd64/Packages.gz
- 5a6f10b4557f29ed037a3221a12cf6dbf99be09d737d2e7ce11a5abd8110ab58 617 main/binary-arm64/Packages
- 06ad37050045353e20f862fdd760cf752465545049d52fc79c54ddbc2dae7e91 414 main/binary-arm64/Packages.gz
+ 57f5947dc2a45ef0044569116c4c7f18c3d10061d26f228f00463ad5ea7167e0 617 main/binary-amd64/Packages
+ 3ff15bb0144b6254a09ae54bc7e824c0946cbbe2c7b6667f95b0a0b7118b3ca1 415 main/binary-amd64/Packages.gz
+ d511929a9a35ba00399ef6e909699698fae12a4e3ae2af2f02a02bb44b816cdc 617 main/binary-arm64/Packages
+ ba05abf84b8de21d5067dbbee612c27407f087c60fc4506b03e5f936f6250255 414 main/binary-arm64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEYahbH3cGY8zRqdJiXfMOu31GROcFAmrkw9IACgkQXfMOu31G
-ROesSBAAo7A8qYEHgNI72N1f0n3TSD+irIeXSjBDMwEHNGLhNpJI1/PsUiVISqte
-H72SPWr7i+F1+vrEj7LqsYY1H56GH0fCmq0Xa1UTu7pS2gmjdfuyRodBkF/iX7BR
-nDks112oCWgReNbVGQpQs2i4BFbV/HGVIBgps16YLRgK8shFiPsPQbVXiNGQRCIm
-2mHNlAx5kj4UXFT1rvt87BO1iXGhamJ6avmPbCqTInCMBqa2xNZUTp9yzg65fJ9K
-nEYVpoLR5bu6zWcP0aFFR7mfohuaMvnCLrdirXeUvzfVUfCO88CYn4tpTM7Yj6+l
-05Ig/6L9xVCTyJH5a8/m66QYbOTk45LHm4WZbPdPda+WInXfE5HFha4d5uoGi6J3
-lPTUIZJDOS9pZVeLmVq48FSqdoa6Ba0suyoG9omVkHf7gKqza/aAjkHJZfbfwkSP
-upLlaGcUHwb6hJE5s2OQO/kZNjWu4hG8/AqJcMR0g8GuEx8bqVNHb4g2sFiBuJeC
-R+dTuex0953TXQ0rAMuQpzpE0GNVWds3TV0SZwVZ1+AZNqA1tRlOdJ/zHbZcw0qa
-p+2VELHUUeDY+wQOSyIeClxRkW9MyNFssgh5vZyc9Xqdy6rBXZUamApI6Wi638hN
-jywbLA5RwOx5gd2an0xZPnWHjRPXyaQny8xARtl58EsJPbwoQ6o=
-=2733
+iQIzBAEBCgAdFiEEYahbH3cGY8zRqdJiXfMOu31GROcFAmrl0eAACgkQXfMOu31G
+ROdd0Q/+NU68vgZqZB/uUD1hO9YlBcdvGotmiNRlY3+JnI1Gy40xUkrQiMGSKC0o
+juKfE8MTEreRzt+cCExLV8fUWQVE6+Qp1nCoE/1+yctz6kDkFfhDsZbES63Umhgf
+5ZDdtBuHbPlnjn/SO6b0y2gdxh8qWI0qbUZ2wN4l59O3sHMNuUIv/rWtp+DDnjYy
+Oj5Q9LkDWBS7l9kfw255rcskXjPk3NmkR2WbN3jgIgTeQGpETiVBH57QN22j9y9t
+vbFEzoCWkhmjUvDxCStoZMbCJcPYmgdLUPtbVqVAJ6xzEf3pnu7e1moWygpBUxt8
+Yz6v7AJVXd3cSs6cxIVldLqLh9rNVJ9vcTuXH+EvMH+d+1YNwyxRrUT22Pma199n
+VIa+z7I5tyyV2h2hE3AIynciq8VtW447DmqXLxz4l/X/xe72ft2W6h/j/fU2nFL6
+wJtUnL7HTlD/z4sCPdZRrU6aepGGYq7m5TLQXZjHWCu1RqpMauklx3M7ycJAhtp7
+gUWWUMEzQrEfmx9JP4FhYmXICD6lBzngd9ocPDIk8GQM/NLZbaO3bgPbF9+XZ92c
+iWlgwNNiCTcjg1cKns2Cg2oZjg5cN82Aa3VX2Y1MB9ymLQXpCfaqHHhF1fLz+R89
+eCNr1gels5LHYzQh0RaOt/cOH5LigNg2kKEq4vToTFfmwxCAcGM=
+=YPOl
 -----END PGP SIGNATURE-----
