@@ -5,29 +5,29 @@ Origin: Solco
 Label: Solco
 Suite: beta
 Codename: beta
-Date: Sun, 01 Nov 2026 02:18:15 UTC
+Date: Sun, 01 Nov 2026 11:55:50 UTC
 Architectures: amd64 arm64
 Components: main
 Description: Solco beta builds, from https://github.com/crmne/solco-releases/releases
 Acquire-By-Hash: yes
 SHA256:
- a5e82dcfddde924c6e6e6221ce42d09349bf4375e54a1e9476080dca95dc8ea5 617 main/binary-amd64/Packages
- d7a69a6deafbee3d4c53a8a6ecbb7211af3e1346c8dfa50f65e6fd4b6e5326a3 415 main/binary-amd64/Packages.gz
- f4b0c0af2a6f6cfc71850aefb7d0e13bfc4808255b84bf6be68ea72454c5f1a1 617 main/binary-arm64/Packages
- ea931bbe16ae5da3aaa6b8588e473602a2ea8a2dd2ee049ac8080abe4282c65b 415 main/binary-arm64/Packages.gz
+ 40af9635d426e02af60df30c69a0ddd7c3d075e95bfd2563efeda3041c8ce7a3 617 main/binary-amd64/Packages
+ 325b6e6b69ec5a444c999bf694144697ded38bcb4642686b7398e2aa42e4689c 416 main/binary-amd64/Packages.gz
+ 2476bc16224e1d83dc9030ff9797e0057f83b4970473ccb68b1f94dacea4efae 617 main/binary-arm64/Packages
+ b95365077041db1985c641a03e150a2f03f4461d6c517a44014cda8a13acc964 417 main/binary-arm64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEYahbH3cGY8zRqdJiXfMOu31GROcFAmrmoZwACgkQXfMOu31G
-ROeUsBAAxmPqrJknP1Esr3qELumqaF98IVkAf3tpRT2rkL0ccaMnzhOJ4a7uLCEK
-6rV555MFHhICdAh86x3HWOg7tGEI4QJEcfBY/mKHrw1sGXZlvxeTt/b2EP6JIS2j
-fIeCg7eQbJeIbPuuy6qDnfjc3+zdlKivMlpyg3E+Pl6J+HSLI9Oqea4RTcQrYes5
-wMXPQ0z+4Y2yHd07k3Bzwf4agOA5ojTVAOQZ0Os7ngnK8zisHXtJwtZdQuquCTxi
-XUQdtYxshAo+/y0M+D6hOBzz6b/AE1pGBcvEB9gbcmYaTJ0nD4LuHMfeiKciFxXd
-lQ6gr56TwDPQ+GV6gDGhp0mTw1UQv1sghnCwAA9rZLmjDqqhsp6J3ZNIVGrSQBtg
-4QSPrPS4NFYhGnVCA443hn+Qk0GtPKhOqEiCphihr5xjFwdjYAT/VJXsj0VyCMsB
-eaBeVfYRqLvKnG5mL9ot/izwhZrRa4uVVyRDjk6Hu0kBazeZuf0wi3e9qg/AS6Lc
-P1IAZSZ/ziOcZpuwnCN4E7H4/20fHrmzyDHK2lKAqZi8tLrRE34qY8kWmLDV+Zaw
-6E4bdnGbm1VKpJaB0u/VNYS8DiDTxyuYcCxh2hLgA/IMJ1/S3f7+IRZPZ6gfbCmi
-a0q5pz3/z7ghVyQf+lnA2yQYn07BJLyfTwlHA7YhCzz/3I9zCfE=
-=3Vge
+iQIzBAEBCgAdFiEEYahbH3cGY8zRqdJiXfMOu31GROcFAmrnKQAACgkQXfMOu31G
+ROfuYA/9H/Oe1AiD2EyGv6p2QCW/gEjeZzmU3RN7dcxJKBknB3tb2xCivA1e8Mgx
+wG16v7oi2BRNjAFuf5T4Q+mjYtQU4/Hb9/SBXhQNrWgfXblvT0vqn2uV6SnX2JXL
+OBQtLjLJ0B5aMqVN8A4mQ6TxZLq9111qenLe+GOGgghWCCCfpuVlxxWNWT/XACdZ
+HS5niSDz45Jwj//cz03ZFoLEXiJTeaBjWjscIRBIN9zCWJkYQaGuE/stk9oFEmO2
+Su1z2HZblyHpln86qUXl2nMTxP/sgbRUQ/CnQeKmAtmhwBvy5fg4Jv9eiWNM2gsQ
+ehLUPa45TJ2j3bvcIUv2s0IM+mkR1iB5KGA7TnGiqX2zWtKsvwzeB8OtsgCzgmqr
+giqrh1AqwSWoBCzdp2uPN4hmzdrNGEli9FNBMtKHYMpSotUQ12NQcsD8LXP2MsoZ
+m7PW5i4P72BBdyXHGsdjwIWRYU7QEVyfv5aRtGaw4AOLiFOMcr3J5iD+VKPaJ33b
+fuj2Fu3b2PLT+wL2RH84a6YQ0jrW2a9FxXK+ulTazaHs3hVrj8OBznF7TRcEnoA0
+uX/XvmQiXB4SyScqOlvFSc35NZlSr8UfZ66WgKXZ1AAVmIGRCR3e5JM1nNLPmu5W
+j/2Els2mfu01xhPKv7Po131202avlP/HrfW6lKPweHHPy0XZCxs=
+=1Uhc
 -----END PGP SIGNATURE-----
