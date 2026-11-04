@@ -186,6 +186,80 @@ jobs:
         shell: bash
         run: mbx test --locked --all-targets --no-fail-fast --message-format short
 
+      # A real export, update and verification on FAT32 and exFAT volumes
+      # the system mounts, which DJs carry (Solco's ADR 0356). Throwaway
+      # volumes on this runner only; the test does nothing without them.
+      - name: Throwaway FAT32 and exFAT volumes (Linux)
+        id: linux-volumes
+        if: ${{ !cancelled() && runner.os == 'Linux' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y dosfstools exfatprogs
+          dir="$RUNNER_TEMP/volumes"
+          mkdir -p "$dir"
+          roots=()
+          for fs in vfat exfat; do
+            image="$dir/$fs.img"
+            truncate -s 256M "$image"
+            if [ "$fs" = vfat ]; then mkfs.vfat -F 32 -n E2EFAT "$image"; else mkfs.exfat -L E2EEXFAT "$image"; fi
+            mkdir -p "$dir/$fs"
+            sudo mount -t "$fs" -o "loop,uid=$(id -u),gid=$(id -g)" "$image" "$dir/$fs"
+            roots+=("$dir/$fs")
+          done
+          echo "volumes=${roots[0]}:${roots[1]}" >> "$GITHUB_OUTPUT"
+
+      - name: Throwaway FAT32 and exFAT volumes (macOS)
+        id: macos-volumes
+        if: ${{ !cancelled() && runner.os == 'macOS' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/volumes"
+          mkdir -p "$dir"
+          hdiutil create -quiet -size 256m -fs "MS-DOS FAT32" -layout MBRSPUD -volname E2EFAT "$dir/fat32.dmg"
+          hdiutil create -quiet -size 256m -fs ExFAT -layout MBRSPUD -volname E2EEXFAT "$dir/exfat.dmg"
+          hdiutil attach -quiet "$dir/fat32.dmg"
+          hdiutil attach -quiet "$dir/exfat.dmg"
+          mount | grep -E 'E2EFAT|E2EEXFAT'
+          echo "volumes=/Volumes/E2EFAT:/Volumes/E2EEXFAT" >> "$GITHUB_OUTPUT"
+
+      - name: Throwaway FAT32 and exFAT volumes (Windows)
+        id: windows-volumes
+        if: ${{ !cancelled() && runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dir = Join-Path $env:RUNNER_TEMP 'volumes'
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          foreach ($volume in @(@{ fs = 'fat32'; label = 'E2EFAT'; letter = 'R' }, @{ fs = 'exfat'; label = 'E2EEXFAT'; letter = 'S' })) {
+            $image = Join-Path $dir "$($volume.label).vhdx"
+            $script = Join-Path $dir "$($volume.label).txt"
+            @(
+              "create vdisk file=`"$image`" maximum=300 type=expandable",
+              "select vdisk file=`"$image`"",
+              'attach vdisk',
+              'convert mbr',
+              'create partition primary',
+              "format fs=$($volume.fs) quick label=$($volume.label)",
+              "assign letter=$($volume.letter)"
+            ) | Set-Content -Encoding ascii $script
+            diskpart /s $script
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+          }
+          Get-Volume -DriveLetter R, S | Format-Table -AutoSize
+          "volumes=R:\;S:\" >> $env:GITHUB_OUTPUT
+
+      - name: Export, update and verify on FAT32 and exFAT
+        if: ${{ !cancelled() }}
+        shell: bash
+        env:
+          SOLCO_EXPORT_VOLUMES: ${{ steps.linux-volumes.outputs.volumes || steps.macos-volumes.outputs.volumes || steps.windows-volumes.outputs.volumes }}
+        run: |
+          set -euo pipefail
+          [ -n "$SOLCO_EXPORT_VOLUMES" ] || { echo "No volumes were created"; exit 1; }
+          mbx test --locked --test pioneer_export --message-format short -- real_volumes --nocapture
+
   release-policy:
     name: release retention fixtures
     if: github.event_name != 'schedule'
