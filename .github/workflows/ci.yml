@@ -187,15 +187,21 @@ jobs:
         run: mbx test --locked --all-targets --no-fail-fast --message-format short
 
       # A real export, update and verification on FAT32 and exFAT volumes
-      # the system mounts, which DJs carry (Solco's ADR 0356). Throwaway
+      # the system mounts, which DJs carry (Solco's ADR 0358). Throwaway
       # volumes on this runner only; the test does nothing without them.
+      # Every volume gets a folder export. Where the system counts a volume
+      # as a removable drive (macOS disk images; Windows VHDs on some
+      # runners), Solco also exports to the drive itself: FAT32 now, exFAT
+      # once Solco accepts exFAT drives, with no change here (the test notes
+      # a drive it skips).
       - name: Throwaway FAT32 and exFAT volumes (Linux)
         id: linux-volumes
         if: ${{ !cancelled() && runner.os == 'Linux' }}
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get install -y dosfstools exfatprogs
+          sudo apt-get update -q
+          sudo apt-get install -y -q dosfstools exfatprogs
           dir="$RUNNER_TEMP/volumes"
           mkdir -p "$dir"
           roots=()
