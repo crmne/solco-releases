@@ -18,7 +18,7 @@ This is where Solco's builds, updates and support issues live. Learn more at
 
 | Platform | File |
 | --- | --- |
-| macOS (Apple Silicon) | `solco-…-macos-arm64.dmg` |
+| macOS (Apple silicon and Intel, macOS 13.4 or later) | `solco-…-macos-universal.dmg` (the same image is also published as `-macos-arm64.dmg`, the name earlier Apple silicon releases used) |
 | Windows | `solco-…-x86_64-pc-windows-msvc.msi` (installer) or the `.zip` (portable) |
 | Linux, Debian and Ubuntu | `solco_…_amd64.deb` or `solco_…_arm64.deb` |
 | Linux, Fedora | `solco-….x86_64.rpm` or `solco-….aarch64.rpm` |

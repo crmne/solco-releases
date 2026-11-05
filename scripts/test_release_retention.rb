@@ -107,6 +107,15 @@ class ReleaseRetentionTest < Minitest::Test
     assert_equal ['solco-v0.8.0-x86_64-pc-windows-msvc.msi'], msi.('v0.8.0')
   end
 
+  def test_releases_after_beta_11_ship_the_universal_mac_app_beside_the_apple_silicon_names
+    mac = ->(tag) { Retention::Version.parse(tag).package_names.grep(/-macos-/) }
+    assert_equal %w[solco-v1.0.0-beta.11-macos-arm64.dmg solco-v1.0.0-beta.11-macos-arm64.tar.gz], mac.('v1.0.0-beta.11')
+    assert_equal %w[solco-v1.0.0-beta.12-macos-arm64.dmg solco-v1.0.0-beta.12-macos-arm64.tar.gz
+                    solco-v1.0.0-beta.12-macos-universal.dmg solco-v1.0.0-beta.12-macos-universal.tar.gz],
+                 mac.('v1.0.0-beta.12')
+    assert_equal 4, mac.('v1.0.0').size
+  end
+
   def test_plan_verifies_every_download_and_link_without_deleting
     manifest = policy.plan
     assert_equal [402_724_739], manifest.fetch('retire').map { |r| r.fetch('id') }

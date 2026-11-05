@@ -11,6 +11,9 @@ module Solco
   module MacosRuntimeStaging
     module_function
 
+    # The Mac build's Cargo target: older sources build aarch64-apple-darwin,
+    # newer ones merge both slices into universal-apple-darwin.
+    TARGETS = %w[aarch64-apple-darwin universal-apple-darwin].freeze
     RELEASE = 'aarch64-apple-darwin/release'
 
     def real_directory!(path)
@@ -36,22 +39,24 @@ module Solco
       end
     end
 
-    def preserve(workspace, environment: ENV)
+    def preserve(workspace, environment: ENV, triple: 'aarch64-apple-darwin')
       raise 'Only a GitHub Actions release runner may prune build output' unless environment['GITHUB_ACTIONS'] == 'true'
+      raise "Unsupported macOS build target: #{triple}" unless TARGETS.include?(triple)
       workspace = Pathname.new(workspace).expand_path
       raise 'Workspace must match GITHUB_WORKSPACE' unless workspace.to_s == environment['GITHUB_WORKSPACE']
       real_directory!(workspace)
       raise 'Workspace must have no symlink parents' unless workspace.realpath == workspace
+      relative = "#{triple}/release"
       target = workspace.join('target')
-      release = target.join(RELEASE)
-      [target, target.join('aarch64-apple-darwin'), release].each { |path| real_directory!(path) }
+      release = target.join(relative)
+      [target, target.join(triple), release].each { |path| real_directory!(path) }
       names = ['solco', *release.children.select { |path| path.basename.to_s.end_with?('.dylib') }.map { |path| path.basename.to_s }].sort
       manifest = names.to_h { |name| [name, fingerprint(release.join(name))] }
       raise 'The final Solco executable is not executable' if (manifest.fetch('solco').fetch(:mode) & 0o111).zero?
 
       stage = Pathname.new(Dir.mktmpdir('.solco-macos-runtime-', workspace.to_s))
       staged_target = stage.join('target')
-      staged_release = staged_target.join(RELEASE)
+      staged_release = staged_target.join(relative)
       original = stage.join('cargo-intermediates')
       begin
         FileUtils.mkdir_p(staged_release)
@@ -84,6 +89,6 @@ module Solco
 end
 
 if $PROGRAM_NAME == __FILE__
-  abort 'Usage: ruby preserve_macos_runtime.rb WORKSPACE' unless ARGV.length == 1
-  Solco::MacosRuntimeStaging.preserve(ARGV.fetch(0))
+  abort 'Usage: ruby preserve_macos_runtime.rb WORKSPACE [TARGET]' unless [1, 2].include?(ARGV.length)
+  Solco::MacosRuntimeStaging.preserve(ARGV.fetch(0), triple: ARGV.fetch(1, 'aarch64-apple-darwin'))
 end

@@ -72,10 +72,10 @@ class ReleaseArtifactRetentionTest < Minitest::Test
     assert_empty @github.deleted
   end
 
-  def test_all_twelve_historical_and_current_exact_names_are_recognized
-    assert_equal 12, Retention::PACKAGE_NAMES.size
+  def test_all_fifteen_historical_and_current_exact_names_are_recognized
+    assert_equal 15, Retention::PACKAGE_NAMES.size
     @github.items = Retention::PACKAGE_NAMES.map.with_index { |name, i| artifact(i + 1, name: name) }
-    assert_equal 12, policy.plan.fetch('retire').size
+    assert_equal 15, policy.plan.fetch('retire').size
   end
 
   def test_preserves_audit_manifests_similar_names_and_unrelated_artifacts

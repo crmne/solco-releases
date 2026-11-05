@@ -18,7 +18,7 @@ env:
 jobs:
   macos:
     runs-on: macos-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
     - name: Require an exact private source commit
       shell: bash
@@ -47,8 +47,19 @@ jobs:
         ruby-version: '4.0'
     - uses: dtolnay/rust-toolchain@stable
       with:
-        targets: aarch64-apple-darwin
-    - run: rustup target add aarch64-apple-darwin
+        targets: aarch64-apple-darwin,x86_64-apple-darwin
+    - run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+    # One app for Apple silicon and Intel Macs where the source builds it.
+    - name: Choose the Mac build
+      run: |
+        set -euo pipefail
+        if [ -f scripts/macos_universal.rb ]; then
+          echo "MAC_TARGET=universal-apple-darwin" >> "$GITHUB_ENV"
+          echo "MAC_PACKAGE=macos-universal" >> "$GITHUB_ENV"
+        else
+          echo "MAC_TARGET=aarch64-apple-darwin" >> "$GITHUB_ENV"
+          echo "MAC_PACKAGE=macos-arm64" >> "$GITHUB_ENV"
+        fi
     - name: Set the reviewed macOS deployment target
       run: |
         set -euo pipefail
@@ -76,25 +87,25 @@ jobs:
       shell: bash
       run: ruby scripts/model_archive.rb stage-private "$VERSION" .release-models
         "$RUNNER_TEMP/alpha-models"
-    - name: Build private alpha arm64
+    - name: Build private alpha
       env:
         SOLCO_OFFICIAL_RELEASE: '1'
         # Unpublished QA builds must never send reports to production.
         SOLCO_SENTRY_DSN: ''
-      run: ruby scripts/alpha_release.rb build --version "$VERSION" --target aarch64-apple-darwin
+      run: ruby scripts/alpha_release.rb build --version "$VERSION" --target "$MAC_TARGET"
     - name: Preserve final macOS runtime and reclaim compiler space
       run: |
         set -euo pipefail
         df -h . "$RUNNER_TEMP"
         du -sh target
-        ruby .release-policy/scripts/preserve_macos_runtime.rb "$GITHUB_WORKSPACE"
+        ruby .release-policy/scripts/preserve_macos_runtime.rb "$GITHUB_WORKSPACE" "$MAC_TARGET"
         df -h . "$RUNNER_TEMP"
         du -sh target
     - name: App bundle
       run: |
         set -euo pipefail
         bash packaging/macos/bundle.sh \
-          target/aarch64-apple-darwin/release/solco \
+          "target/$MAC_TARGET/release/solco" \
           Solco.app "$VERSION" "$RUNNER_TEMP/alpha-models" \
           "$SOLCO_MACOS_VERSION" "$SOLCO_MACOS_BUILD_VERSION"
         cp release/private-alpha.json Solco.app/Contents/Resources/alpha-release.json
@@ -111,7 +122,7 @@ jobs:
           --version "$(ruby -ryaml -e 'print YAML.load_file("native-packages.yaml").dig("tool", "version")')"
         export SOURCE_DATE_EPOCH="$SOLCO_ALPHA_RELEASED_AT"
         native-packages --config native-packages.yaml build \
-          --version "$VERSION" --target macos-arm64 --output "$RUNNER_TEMP/native-packages"
+          --version "$VERSION" --target "$MAC_PACKAGE" --output "$RUNNER_TEMP/native-packages"
     - uses: actions/upload-artifact@v7
       with:
         name: macos-test-installer

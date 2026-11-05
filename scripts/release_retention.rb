@@ -44,11 +44,16 @@ module Solco
 
       # The first release after this one ships the Windows MSI package too.
       LAST_WITHOUT_MSI = 'v0.8.0-alpha.1'
+      # Later releases ship one Mac app for Apple silicon and Intel, as
+      # -macos-universal, and the same files under the -macos-arm64 names the
+      # copies installed before it update from.
+      LAST_APPLE_SILICON_ONLY = 'v1.0.0-beta.11'
 
       def package_names
         native = tag.delete_prefix('v').tr('-', '.')
         msi = self > Version.parse(LAST_WITHOUT_MSI) ? ["solco-#{tag}-x86_64-pc-windows-msvc.msi"] : []
-        [*msi, "solco-#{tag}-x86_64-unknown-linux-gnu.tar.gz",
+        universal = self > Version.parse(LAST_APPLE_SILICON_ONLY) ? ["solco-#{tag}-macos-universal.dmg", "solco-#{tag}-macos-universal.tar.gz"] : []
+        [*msi, *universal,"solco-#{tag}-x86_64-unknown-linux-gnu.tar.gz",
          "solco-#{tag}-aarch64-unknown-linux-gnu.tar.gz",
          "solco-#{tag}-x86_64-pc-windows-msvc.zip",
          "solco-#{tag}-x86_64-pc-windows-msvc-setup.exe",

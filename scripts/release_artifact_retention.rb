@@ -8,9 +8,9 @@ module Solco
     REPOSITORY = ReleaseRetention::REPOSITORY
     SCHEMA = 1
     # Exact historical/current release package names, never a prefix match.
-    TARGETS = %w[x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-pc-windows-msvc macos-arm64].freeze
+    TARGETS = %w[x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-pc-windows-msvc macos-arm64 macos-universal].freeze
     PACKAGE_NAMES = (TARGETS + TARGETS.map { |target| "application-#{target}" } +
-      %w[linux-amd64 linux-arm64 windows-amd64 macos-arm64].map { |target| "native-packages-#{target}" }).freeze
+      %w[linux-amd64 linux-arm64 windows-amd64 macos-arm64 macos-universal].map { |target| "native-packages-#{target}" }).freeze
     # Only these reviewed pre-version-title runs belong to the initial migration.
     # An unknown future "Build release" run must never be guessed to be old.
     LEGACY_RUN_IDS = [34_858_839_221, 34_853_062_638, 34_851_498_920, 34_850_490_262,

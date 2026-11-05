@@ -115,13 +115,15 @@ jobs:
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     # The first build of each platform is cold.
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 120 || 90 }}
+    timeout-minutes: ${{ (matrix.os == 'windows-latest' || matrix.os == 'macos-15-intel') && 120 || 90 }}
     strategy:
       # Keep each platform's failure details: cancelling a sibling while its
       # tests run loses Rust's final assertion report and forces another build.
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # macos-15-intel is a real Intel Mac: the universal app's x86_64 slice
+        # (crmne/solco ADR 0365).
+        os: [ubuntu-latest, macos-latest, windows-latest, macos-15-intel]
     steps:
       - name: The request names one full commit
         shell: bash
@@ -162,16 +164,42 @@ jobs:
           mkdir -p "$RUNNER_TEMP/tmp"
           echo "TMPDIR=$(cd "$RUNNER_TEMP/tmp" && pwd -P)" >> "$GITHUB_ENV"
 
+      # Intel Macs run the universal app's x86_64 slice, which links
+      # Microsoft's pinned ONNX Runtime for Intel Macs. Sources from before
+      # the universal app have no Intel build and skip this platform.
+      - name: Intel Mac support in this source
+        id: intel
+        if: runner.os == 'macOS' && runner.arch == 'X64'
+        shell: bash
+        run: |
+          if [ -f scripts/macos_universal.rb ]; then
+            echo supported=true >> "$GITHUB_OUTPUT"
+          else
+            echo supported=false >> "$GITHUB_OUTPUT"
+            echo "This source has no Intel Mac build" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       # The toolchain rust-toolchain.toml pins, with rustfmt and clippy,
       # before the cache so its key follows the pinned rustc.
       - name: Rust toolchain
+        if: steps.intel.outputs.supported != 'false'
         shell: bash
         run: rustup toolchain install
 
       # One cache generation per platform.
       - uses: jdx/mr-boxington-action@v1
+        if: steps.intel.outputs.supported != 'false'
         with:
           cache-generation: test-${{ matrix.os }}-v1
+
+      - uses: ruby/setup-ruby@v1
+        if: steps.intel.outputs.supported == 'true'
+        with:
+          ruby-version: '4.0'
+      - name: Intel Mac ONNX Runtime
+        if: steps.intel.outputs.supported == 'true'
+        shell: bash
+        run: ruby scripts/macos_universal.rb intel-env >> "$GITHUB_ENV"
 
       - name: Formatting
         if: runner.os == 'Linux'
@@ -179,10 +207,12 @@ jobs:
         run: cargo fmt --check -- -l
 
       - name: Lints
+        if: steps.intel.outputs.supported != 'false'
         shell: bash
         run: mbx clippy --locked --all-targets --message-format short
 
       - name: Tests
+        if: steps.intel.outputs.supported != 'false'
         shell: bash
         run: mbx test --locked --all-targets --no-fail-fast --message-format short
 

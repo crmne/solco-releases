@@ -447,7 +447,7 @@ jobs:
           if-no-files-found: error
 
   macos:
-    name: macOS arm64 app
+    name: macOS app
     needs: prepare
     runs-on: macos-latest
     env:
@@ -477,8 +477,21 @@ jobs:
           ruby-version: '4.0'
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-darwin
-      - run: rustup target add aarch64-apple-darwin
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      # Sources with scripts/macos_universal.rb build one app for Apple silicon
+      # and Intel Macs; older tags rebuild their Apple silicon app.
+      - name: Choose the Mac build
+        run: |
+          set -euo pipefail
+          if [ -f scripts/macos_universal.rb ]; then
+            echo "MAC_TARGET=universal-apple-darwin" >> "$GITHUB_ENV"
+            echo "MAC_PACKAGE=macos-universal" >> "$GITHUB_ENV"
+          else
+            echo "MAC_TARGET=aarch64-apple-darwin" >> "$GITHUB_ENV"
+            echo "MAC_PACKAGE=macos-arm64" >> "$GITHUB_ENV"
+          fi
 
       - name: Set the reviewed macOS deployment target
         run: |
@@ -513,24 +526,30 @@ jobs:
         shell: bash
         run: ruby scripts/model_archive.rb stage-private "$VERSION" .release-models "$RUNNER_TEMP/alpha-models"
 
-      - name: Build private alpha arm64
+      - name: Build private alpha
         env:
           SOLCO_OFFICIAL_RELEASE: '1'
         if: needs.prepare.outputs.private_alpha == 'true'
-        run: ruby scripts/alpha_release.rb build --version "$VERSION" --target aarch64-apple-darwin
+        run: ruby scripts/alpha_release.rb build --version "$VERSION" --target "$MAC_TARGET"
 
-      - name: Build stable arm64
+      - name: Build stable
         env:
           SOLCO_OFFICIAL_RELEASE: '1'
         if: needs.prepare.outputs.private_alpha != 'true'
-        run: cargo build --locked --release --message-format short --target aarch64-apple-darwin
+        run: |
+          set -euo pipefail
+          if [ "$MAC_TARGET" = universal-apple-darwin ]; then
+            ruby scripts/macos_universal.rb build
+          else
+            cargo build --locked --release --message-format short --target aarch64-apple-darwin
+          fi
 
       - name: Preserve final macOS runtime and reclaim compiler space
         run: |
           set -euo pipefail
           df -h . "$RUNNER_TEMP"
           du -sh target
-          ruby .release-policy/scripts/preserve_macos_runtime.rb "$GITHUB_WORKSPACE"
+          ruby .release-policy/scripts/preserve_macos_runtime.rb "$GITHUB_WORKSPACE" "$MAC_TARGET"
           df -h . "$RUNNER_TEMP"
           du -sh target
 
@@ -551,7 +570,7 @@ jobs:
           set -euo pipefail
           if [ "${{ needs.prepare.outputs.private_alpha }}" = "true" ]; then
             bash packaging/macos/bundle.sh \
-              target/aarch64-apple-darwin/release/solco \
+              "target/$MAC_TARGET/release/solco" \
               Solco.app "$VERSION" "$RUNNER_TEMP/alpha-models" \
               "$SOLCO_MACOS_VERSION" "$SOLCO_MACOS_BUILD_VERSION"
             cp release/private-alpha.json Solco.app/Contents/Resources/alpha-release.json
@@ -559,7 +578,7 @@ jobs:
             chmod 644 Solco.app/Contents/Resources/{alpha-release.json,PRIVATE-ALPHA.md}
           else
             bash packaging/macos/bundle.sh \
-              target/aarch64-apple-darwin/release/solco \
+              "target/$MAC_TARGET/release/solco" \
               Solco.app "$VERSION" "$RUNNER_TEMP/beat_this.onnx"
           fi
 
@@ -578,10 +597,10 @@ jobs:
           gem install native-packages --no-document \
             --version "$(ruby -ryaml -e 'print YAML.load_file("native-packages.yaml").dig("tool", "version")')"
           native-packages --config native-packages.yaml build \
-            --version "$VERSION" --target macos-arm64 --output "$RUNNER_TEMP/native-stable-macos"
-          name="solco-${RELEASE_TAG}-macos-arm64"
+            --version "$VERSION" --target "$MAC_PACKAGE" --output "$RUNNER_TEMP/native-stable-macos"
+          name="solco-${RELEASE_TAG}-${MAC_PACKAGE}"
           mkdir -p dist
-          cp "$RUNNER_TEMP/native-stable-macos/packages/macos-arm64/dmg/$name.dmg" "dist/$name.dmg"
+          cp "$RUNNER_TEMP/native-stable-macos/packages/$MAC_PACKAGE/dmg/$name.dmg" "dist/$name.dmg"
 
       - name: Build verified native alpha DMG
         if: needs.prepare.outputs.private_alpha == 'true'
@@ -591,23 +610,41 @@ jobs:
             --version "$(ruby -ryaml -e 'print YAML.load_file("native-packages.yaml").dig("tool", "version")')"
           export SOURCE_DATE_EPOCH="$SOLCO_ALPHA_RELEASED_AT"
           native-packages --config native-packages.yaml build \
-            --version "$VERSION" --target macos-arm64 --output "$RUNNER_TEMP/native-packages"
+            --version "$VERSION" --target "$MAC_PACKAGE" --output "$RUNNER_TEMP/native-packages"
       - uses: actions/upload-artifact@v7
         if: needs.prepare.outputs.private_alpha == 'true'
         with:
-          name: native-packages-macos-arm64
+          name: native-packages-${{ env.MAC_PACKAGE }}
           retention-days: 1
           path: ${{ runner.temp }}/native-packages/
           include-hidden-files: true
           if-no-files-found: error
 
-      - name: Sign, notarize and archive portable arm64 code
+      # Copies installed before the universal app look for -macos-arm64.dmg:
+      # the same image under that name keeps them updating, onto the
+      # universal app (crmne/solco ADR 0365).
+      - name: Publish the universal image under the Apple silicon name too
+        if: env.MAC_PACKAGE == 'macos-universal'
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          universal="solco-${RELEASE_TAG}-macos-universal.dmg"
+          if [ "${{ needs.prepare.outputs.private_alpha }}" = "true" ]; then
+            image="$RUNNER_TEMP/native-packages/packages/macos-universal/dmg/$universal"
+          else
+            image="dist/$universal"
+          fi
+          test -f "$image"
+          cp "$image" "dist/solco-${RELEASE_TAG}-macos-arm64.dmg"
+          cmp "$image" "dist/solco-${RELEASE_TAG}-macos-arm64.dmg"
+
+      - name: Sign, notarize and archive portable Mac code
         run: |
           set -euo pipefail
           gem install native-packages --no-document \
             --version "$(ruby -ryaml -e 'print YAML.load_file("native-packages.yaml").dig("tool", "version")')"
-          name="solco-${RELEASE_TAG}-macos-arm64"
-          release="target/aarch64-apple-darwin/release"
+          name="solco-${RELEASE_TAG}-${MAC_PACKAGE}"
+          release="target/${MAC_TARGET}/release"
           input="$RUNNER_TEMP/portable-input/$name"
           signed="$RUNNER_TEMP/portable-signed/$name"
           mkdir -p "$input" dist
@@ -634,10 +671,16 @@ jobs:
           ruby scripts/macos_runtime.rb verify "$input"
           native-packages notarize-macos "$input" --output "$signed"
           tar czf "dist/$name.tar.gz" -C "$RUNNER_TEMP/portable-signed" "$name"
+          # The same signed code in the folder the Apple silicon name expects.
+          if [ "$MAC_PACKAGE" = macos-universal ]; then
+            legacy="solco-${RELEASE_TAG}-macos-arm64"
+            cp -Rp "$signed" "$RUNNER_TEMP/portable-signed/$legacy"
+            tar czf "dist/$legacy.tar.gz" -C "$RUNNER_TEMP/portable-signed" "$legacy"
+          fi
 
       - uses: actions/upload-artifact@v7
         with:
-          name: application-macos-arm64
+          name: application-${{ env.MAC_PACKAGE }}
           retention-days: 1
           path: |
             dist/*.dmg

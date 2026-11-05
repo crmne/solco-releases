@@ -56,10 +56,10 @@ class ReleaseWorkflowTest < Minitest::Test
     names = steps.map { |entry| entry['name'] }
     cleanup = steps.fetch(names.index('Preserve final macOS runtime and reclaim compiler space'))
     %w[alpha stable].each do |kind|
-      assert_operator names.index("Build #{kind == 'alpha' ? 'private alpha' : kind} arm64"), :<, names.index(cleanup['name'])
+      assert_operator names.index("Build #{kind == 'alpha' ? 'private alpha' : kind}"), :<, names.index(cleanup['name'])
     end
     assert_operator names.index(cleanup['name']), :<, names.index('App bundle')
-    assert_includes cleanup.fetch('run'), 'ruby .release-policy/scripts/preserve_macos_runtime.rb "$GITHUB_WORKSPACE"'
+    assert_includes cleanup.fetch('run'), 'ruby .release-policy/scripts/preserve_macos_runtime.rb "$GITHUB_WORKSPACE" "$MAC_TARGET"'
     assert_equal 2, cleanup.fetch('run').scan('df -h . "$RUNNER_TEMP"').size
     assert_equal 2, cleanup.fetch('run').scan('du -sh target').size
     policy = steps.fetch(names.index('Check out macOS runner maintenance policy')).fetch('with')
@@ -68,6 +68,24 @@ class ReleaseWorkflowTest < Minitest::Test
     assert_equal '.release-policy', policy.fetch('path')
     assert_equal false, policy.fetch('persist-credentials')
     refute cleanup.key?('if'), 'both stable and alpha builds need room for DMG packaging'
+  end
+
+  def test_universal_mac_app_also_ships_under_the_apple_silicon_names
+    steps = WORKFLOW.fetch('jobs').fetch('macos').fetch('steps')
+    names = steps.map { |entry| entry['name'] }
+    choose = steps.fetch(names.index('Choose the Mac build')).fetch('run')
+    assert_includes choose, 'if [ -f scripts/macos_universal.rb ]'
+    assert_includes choose, 'MAC_PACKAGE=macos-universal'
+    assert_includes choose, 'MAC_PACKAGE=macos-arm64'
+    assert_operator names.index('Choose the Mac build'), :<, names.index('Build private alpha')
+    copy = steps.fetch(names.index('Publish the universal image under the Apple silicon name too'))
+    assert_equal "env.MAC_PACKAGE == 'macos-universal'", copy.fetch('if')
+    assert_includes copy.fetch('run'), 'cp "$image" "dist/solco-${RELEASE_TAG}-macos-arm64.dmg"'
+    portable = steps.fetch(names.index('Sign, notarize and archive portable Mac code')).fetch('run')
+    assert_includes portable, 'tar czf "dist/$legacy.tar.gz"'
+    upload = steps.rindex { |entry| entry['uses']&.start_with?('actions/upload-artifact') }
+    assert_operator names.index('Sign, notarize and archive portable Mac code'), :<, upload
+    assert_equal 'application-${{ env.MAC_PACKAGE }}', steps.fetch(upload).fetch('with').fetch('name')
   end
 
   def test_artifact_deletion_follows_verified_publication_and_saved_exact_inventory

@@ -72,11 +72,11 @@ verification, then records exact artifact IDs, names, byte counts, digests,
 timestamps and owning run metadata. Its `apply` repeats verification before
 deleting only the recorded artifact IDs.
 
-Eligible names are exactly the four historical targets
+Eligible names are exactly the historical and current targets
 `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`,
-`x86_64-pc-windows-msvc`, `macos-arm64`; those names prefixed by `application-`;
+`x86_64-pc-windows-msvc`, `macos-arm64`, `macos-universal`; those names prefixed by `application-`;
 and `native-packages-linux-amd64`, `native-packages-linux-arm64`,
-`native-packages-windows-amd64`, `native-packages-macos-arm64`. Every artifact
+`native-packages-windows-amd64`, `native-packages-macos-arm64`, `native-packages-macos-universal`. Every artifact
 must belong to this public repository's `.github/workflows/release.yml`, with
 matching repository IDs and commit SHA. Similar names in another workflow or
 repository are excluded.

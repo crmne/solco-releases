@@ -14,10 +14,10 @@ class PreserveMacosRuntimeTest < Minitest::Test
     STAGING.define_singleton_method(name, original)
   end
 
-  def with_build
+  def with_build(triple = 'aarch64-apple-darwin')
     Dir.mktmpdir('solco-macos-build-') do |directory|
       workspace = Pathname.new(directory).realpath
-      release = workspace.join('target', STAGING::RELEASE)
+      release = workspace.join('target', triple, 'release')
       FileUtils.mkdir_p(release.join('build/dawn/out'))
       FileUtils.mkdir_p(workspace.join('target/release/build/host-macro'))
       release.join('solco').write('final executable')
@@ -46,6 +46,24 @@ class PreserveMacosRuntimeTest < Minitest::Test
       refute workspace.join('target/release').exist?
       assert_equal 'untouched source', workspace.join('keep-source').read
       assert_empty workspace.glob('.solco-macos-runtime-*')
+    end
+  end
+
+  def test_the_universal_build_keeps_its_merged_runtime
+    with_build('universal-apple-darwin') do |workspace, release, environment|
+      before = %w[solco libdirect.dylib libdawn.dylib].to_h { |name| [name, STAGING.fingerprint(release.join(name))] }
+      capture_io do
+        assert_equal before, STAGING.preserve(workspace, environment: environment, triple: 'universal-apple-darwin')
+      end
+      before.each { |name, expected| assert_equal expected, STAGING.fingerprint(release.join(name)) }
+      refute workspace.join('target/release').exist?
+    end
+  end
+
+  def test_an_unknown_target_is_refused_before_anything_moves
+    with_build do |workspace, release, environment|
+      assert_raises(RuntimeError) { STAGING.preserve(workspace, environment: environment, triple: 'release') }
+      assert_originals(workspace, release)
     end
   end
 
