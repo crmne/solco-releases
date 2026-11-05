@@ -115,7 +115,7 @@ jobs:
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     # The first build of each platform is cold.
-    timeout-minutes: ${{ (matrix.os == 'windows-latest' || matrix.os == 'macos-15-intel') && 120 || 90 }}
+    timeout-minutes: ${{ matrix.os == 'macos-15-intel' && 180 || matrix.os == 'windows-latest' && 120 || 90 }}
     strategy:
       # Keep each platform's failure details: cancelling a sibling while its
       # tests run loses Rust's final assertion report and forces another build.
@@ -186,11 +186,22 @@ jobs:
         shell: bash
         run: rustup toolchain install
 
-      # One cache generation per platform.
+      # One cache generation per platform. mbx has no Intel Mac build, so
+      # that runner builds with Cargo alone, keeping only the downloaded
+      # crates between runs.
       - uses: jdx/mr-boxington-action@v1
-        if: steps.intel.outputs.supported != 'false'
+        if: steps.intel.outputs.supported == ''
         with:
           cache-generation: test-${{ matrix.os }}-v1
+      - uses: actions/cache@v6
+        if: steps.intel.outputs.supported == 'true'
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: intel-mac-crates-${{ hashFiles('Cargo.lock') }}
+          restore-keys: intel-mac-crates-
 
       - uses: ruby/setup-ruby@v1
         if: steps.intel.outputs.supported == 'true'
@@ -199,22 +210,26 @@ jobs:
       - name: Intel Mac ONNX Runtime
         if: steps.intel.outputs.supported == 'true'
         shell: bash
-        run: ruby scripts/macos_universal.rb intel-env >> "$GITHUB_ENV"
+        run: |
+          set -euo pipefail
+          ruby scripts/macos_universal.rb intel-env >> "$GITHUB_ENV"
+          echo "SOLCO_CARGO=cargo" >> "$GITHUB_ENV"
 
       - name: Formatting
         if: runner.os == 'Linux'
         shell: bash
         run: cargo fmt --check -- -l
 
+      # The other platforms lint the shared code; Intel Macs only test it.
       - name: Lints
-        if: steps.intel.outputs.supported != 'false'
+        if: steps.intel.outputs.supported == ''
         shell: bash
         run: mbx clippy --locked --all-targets --message-format short
 
       - name: Tests
         if: steps.intel.outputs.supported != 'false'
         shell: bash
-        run: mbx test --locked --all-targets --no-fail-fast --message-format short
+        run: ${SOLCO_CARGO:-mbx} test --locked --all-targets --no-fail-fast --message-format short
 
   release-policy:
     name: release retention fixtures
