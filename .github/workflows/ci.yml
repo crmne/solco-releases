@@ -115,7 +115,8 @@ jobs:
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     # The first build of each platform is cold.
-    timeout-minutes: ${{ matrix.os == 'macos-15-intel' && 180 || matrix.os == 'windows-latest' && 120 || 90 }}
+    # A cold macOS build alone takes about an hour, its tests another 25 minutes.
+    timeout-minutes: ${{ matrix.os == 'macos-15-intel' && 180 || matrix.os == 'ubuntu-latest' && 90 || 120 }}
     strategy:
       # Keep each platform's failure details: cancelling a sibling while its
       # tests run loses Rust's final assertion report and forces another build.
