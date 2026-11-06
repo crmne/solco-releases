@@ -235,11 +235,9 @@ jobs:
       # A real export, update and verification on FAT32 and exFAT volumes
       # the system mounts, which DJs carry (Solco's ADR 0358). Throwaway
       # volumes on this runner only; the test does nothing without them.
-      # Every volume gets a folder export. Where the system counts a volume
-      # as a removable drive (macOS disk images; Windows VHDs on some
-      # runners), Solco also exports to the drive itself: FAT32 now, exFAT
-      # once Solco accepts exFAT drives, with no change here (the test notes
-      # a drive it skips).
+      # Every volume gets a folder export and one with both libraries. Where
+      # the system counts a volume as a removable drive (macOS disk images;
+      # Windows VHDs on some runners), Solco also exports to the drive itself.
       - name: Throwaway FAT32 and exFAT volumes (Linux)
         id: linux-volumes
         if: ${{ !cancelled() && runner.os == 'Linux' }}
@@ -263,7 +261,7 @@ jobs:
 
       - name: Throwaway FAT32 and exFAT volumes (macOS)
         id: macos-volumes
-        if: ${{ !cancelled() && runner.os == 'macOS' }}
+        if: ${{ !cancelled() && runner.os == 'macOS' && steps.intel.outputs.supported != 'false' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -303,14 +301,14 @@ jobs:
           "volumes=R:\;S:\" >> $env:GITHUB_OUTPUT
 
       - name: Export, update and verify on FAT32 and exFAT
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.intel.outputs.supported != 'false' }}
         shell: bash
         env:
           SOLCO_EXPORT_VOLUMES: ${{ steps.linux-volumes.outputs.volumes || steps.macos-volumes.outputs.volumes || steps.windows-volumes.outputs.volumes }}
         run: |
           set -euo pipefail
           [ -n "$SOLCO_EXPORT_VOLUMES" ] || { echo "No volumes were created"; exit 1; }
-          mbx test --locked --test pioneer_export --message-format short -- real_volumes --nocapture
+          ${SOLCO_CARGO:-mbx} test --locked --test pioneer_export --message-format short -- real_volumes --nocapture
 
   release-policy:
     name: release retention fixtures
