@@ -1,14 +1,14 @@
 {
-  "version": "1.0.0-beta.11",
-  "tag": "v1.0.0-beta.11",
+  "version": "1.0.0-beta.12",
+  "tag": "v1.0.0-beta.12",
   "sources": {
     "x86_64-linux": {
-      "url": "https://github.com/crmne/solco-releases/releases/download/v1.0.0-beta.11/solco-v1.0.0-beta.11-x86_64-unknown-linux-gnu.tar.gz",
-      "hash": "sha256-NWjrCyT32nmWHYbH2v8ulAcbqFt8IOXRFy6irrtltcU="
+      "url": "https://github.com/crmne/solco-releases/releases/download/v1.0.0-beta.12/solco-v1.0.0-beta.12-x86_64-unknown-linux-gnu.tar.gz",
+      "hash": "sha256-RO+gmofl6PCujxT2s9hVwphFMMQty4uVlY42skzvV2w="
     },
     "aarch64-linux": {
-      "url": "https://github.com/crmne/solco-releases/releases/download/v1.0.0-beta.11/solco-v1.0.0-beta.11-aarch64-unknown-linux-gnu.tar.gz",
-      "hash": "sha256-sAvQdl646Ko37OxfEgYWfaghAv62LhzymVIZ6sKVeps="
+      "url": "https://github.com/crmne/solco-releases/releases/download/v1.0.0-beta.12/solco-v1.0.0-beta.12-aarch64-unknown-linux-gnu.tar.gz",
+      "hash": "sha256-gzHn8mRFnXkmfu6fPgDw3Taq/ZzZ13AZQuBz22ypMQc="
     }
   }
 }
