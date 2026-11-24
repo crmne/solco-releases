@@ -115,6 +115,21 @@ class ReleaseWorkflowTest < Minitest::Test
     refute STEPS.any? { |entry| entry.fetch('run', '').include?('native-packages publish') }
   end
 
+  # beta.13's x86-64 download was built on ubuntu-latest once it meant 26.04,
+  # linked glibc 2.43 and didn't start on Ubuntu 24.04 (Solco ADR 0407).
+  def test_linux_builds_run_on_the_oldest_supported_ubuntu_and_check_glibc_before_archiving
+    build = WORKFLOW.fetch('jobs').fetch('build')
+    linux = build.fetch('strategy').fetch('matrix').fetch('include').select { |entry| entry['target'].end_with?('-linux-gnu') }
+    assert_equal({'x86_64-unknown-linux-gnu' => 'ubuntu-24.04', 'aarch64-unknown-linux-gnu' => 'ubuntu-24.04-arm'},
+                 linux.to_h { |entry| [entry.fetch('target'), entry.fetch('os')] })
+    package = build.fetch('steps').find { |entry| entry['name'] == 'Package' }.fetch('run')
+    check = package.index('ruby scripts/linux_runtime.rb verify "dist/$name"')
+    assert check, 'the Package step checks the staged Linux tree against the glibc floor'
+    assert_operator check, :<, package.index('tar czf "$name.tar.gz" "$name"')
+    assert_operator package.index('cp "$release/solco" "dist/$name/"'), :<, check
+    assert_operator package.index('"$release"/*.so'), :<, check
+  end
+
   def test_verification_and_saved_inventory_precede_retirement
     names = ['Publish public binary release', 'Verify published downloads and plan older release retirement',
              'Save the exact verified retirement inventory', 'Retire only the verified older application releases']

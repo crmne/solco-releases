@@ -122,8 +122,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Linux builds run on the oldest distribution the packages promise
+        # (glibc 2.39, Ubuntu 24.04): glibc links each symbol at the build
+        # host's version, so a newer ubuntu-latest makes downloads that don't
+        # start there. Never ubuntu-latest for these (Solco ADR 0407).
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             package_target: linux-amd64
           - os: ubuntu-24.04-arm
@@ -292,6 +296,12 @@ jobs:
             if [ -d packaging/icons/hicolor ]; then
               cp -r --parents packaging/icons/hicolor "dist/$name/"
             fi
+          fi
+          # Stop before archiving when the executable or a bundled library
+          # needs a newer glibc than the packages declare. Older source tags
+          # have no check.
+          if [ "${{ runner.os }}" = "Linux" ] && [ -f scripts/linux_runtime.rb ]; then
+            ruby scripts/linux_runtime.rb verify "dist/$name"
           fi
           # Windows archives its portable copy once its code is signed.
           if [ "${{ runner.os }}" != "Windows" ]; then
