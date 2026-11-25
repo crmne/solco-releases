@@ -2,13 +2,13 @@ Origin: Solco
 Label: Solco
 Suite: beta
 Codename: beta
-Date: Sat, 14 Nov 2026 18:44:04 UTC
+Date: Wed, 25 Nov 2026 22:16:40 UTC
 Architectures: amd64 arm64
 Components: main
 Description: Solco beta builds, from https://github.com/crmne/solco-releases/releases
 Acquire-By-Hash: yes
 SHA256:
- 5f3bc515d8fbff325a142f6dba8c90daece8963a49080cd724370e05b95e41f5 620 main/binary-amd64/Packages
- 4e865ad442f123547ce3fb63ec23d726faf4459be9350bbb0b96f713b53dc372 417 main/binary-amd64/Packages.gz
- 554dde4e04e45b79a79aea4f209360158bd17288e393f6619889795a92a77ada 620 main/binary-arm64/Packages
- 689be64ec9970d4c8abba595669c770899b39a2ca2d08d5cb5b466111a1a564c 417 main/binary-arm64/Packages.gz
+ bfbde1475d94ef17b742c472b32b37cf36eb1f3996bb9f20065b79cb1a9262f6 620 main/binary-amd64/Packages
+ 81e2b3c554cdbff3949ef638372c1439a06b18f84738d58af88aaeea6658439b 416 main/binary-amd64/Packages.gz
+ 47d309f8430b514c1b44bff8fdaf8c1b56bcddb8359fb05643dab337641ccce6 620 main/binary-arm64/Packages
+ abbb3cb815b5fa763cc33f485a1507a1df6f087d3055d5a0f64907e6c36601f8 417 main/binary-arm64/Packages.gz
